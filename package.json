@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "description": "Chatblix unified-inbox LLM pipeline (NestJS port)",
   "private": true,
+  "packageManager": "pnpm@11.1.1",
   "engines": {
-    "node": ">=20.11"
+    "node": ">=20.11",
+    "pnpm": ">=10"
   },
   "scripts": {
     "build": "nest build",
