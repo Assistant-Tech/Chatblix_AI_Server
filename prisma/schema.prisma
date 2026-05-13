@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id             String    @id
+  lead_score     Int       @default(0)
+  stage          String    @default("new")
+  extracted_data Json      @default("{}")
+  last_intent    String?
+  updated_at     DateTime  @updatedAt
+  messages       Message[]
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  session_id String
+  role       String // 'user' or 'assistant'
+  content    String
+  metadata   Json?
+  timestamp  DateTime @default(now())
+
+  lead Lead @relation(fields: [session_id], references: [id])
+}
+
+model TurnLog {
+  id                       String   @id @default(uuid())
+  session_id               String
+  ts                       DateTime @default(now())
+  duration_ms              Int
+  input                    Json
+  triage                   Json
+  attempts                 Json
+  outcome                  String
+  shipped                  String
+  intent_path              String?
+  language                 String?
+  retry_count              Int      @default(0)
+  high_severity_violations Int      @default(0)
+
+  @@index([ts])
+  @@index([intent_path])
+  @@index([session_id, ts])
+}

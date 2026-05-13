@@ -1,0 +1,456 @@
+{
+  "business_name": "Fresh and More — Pure Himalayan Botanical Skincare",
+  "industry": "Natural and organic skincare brand based in Kathmandu, Nepal. Sells direct-to-consumer through the freshandmore.com.np webshop, Instagram, Facebook and WhatsApp. 100% vegan, cruelty-free, no parabens, formulated with locally sourced Himalayan botanicals for Nepali climate and skin types.",
+  "channels": {
+    "website": "https://freshandmore.com.np",
+    "instagram": "@freshandmore.skin",
+    "facebook_page": "Fresh and More Nepal",
+    "whatsapp_business": "+977-9802-342374",
+    "support_phone": "+977-9700-007762",
+    "support_email": "support@freshandmore.com.np",
+    "primary_support_channel": "WhatsApp — fastest response from the Nepal skincare support team"
+  },
+  "product_catalog": [
+    {
+      "sku": "FM-SCRUB-ORANGE",
+      "name": "Orange Face Scrub — 100% Organic Natural Care",
+      "category": "Face Scrubs",
+      "subcategory": "Scrub",
+      "key_ingredients": ["Orange peel", "Cane sugar", "Almond oil", "Vitamin C"],
+      "skin_type": ["normal", "dull", "combination"],
+      "benefits": ["Brightens", "Removes tan", "Gentle exfoliation", "Adds glow"],
+      "price_npr": 950,
+      "stock_status": "in_stock",
+      "tags": ["bestseller", "vitamin_c", "vegan", "natural"],
+      "how_to_use": "Apply on damp face in gentle circular motions for 1–2 minutes, then rinse off with lukewarm water. Use 2–3 times a week.",
+      "usage_frequency": "2–3 times per week",
+      "shelf_life_months": 12,
+      "storage_tip": "Store in a cool, dry place away from direct sunlight. Close lid tightly after use.",
+      "caution": "Avoid contact with eyes. Discontinue if irritation occurs. Do a patch test before first use.",
+      "weight_grams": 100,
+      "packaging": "BPA-free jar with sealed lid"
+    },
+    {
+      "sku": "FM-MASK-BEETROOT",
+      "name": "Beet Root Face Mask — Natural Glow Care",
+      "category": "Face Masks",
+      "subcategory": "Mask",
+      "key_ingredients": ["Beetroot extract", "Multani mitti", "Rose water"],
+      "skin_type": ["normal", "dull", "dry"],
+      "benefits": ["Natural pink glow", "Lightens pigmentation", "Hydrates"],
+      "price_npr": 950,
+      "stock_status": "in_stock",
+      "tags": ["bestseller", "glow", "vegan"],
+      "how_to_use": "Mix with rose water or plain water to form a paste. Apply evenly on face, leave for 15–20 minutes, rinse with lukewarm water.",
+      "usage_frequency": "1–2 times per week",
+      "shelf_life_months": 12,
+      "storage_tip": "Keep away from moisture. Close lid tightly after use.",
+      "caution": "May temporarily tint skin pink — this fades within 30 minutes. Patch test recommended.",
+      "weight_grams": 100,
+      "packaging": "Sealed pouch / resealable pack"
+    },
+    {
+      "sku": "FM-MASK-HALDI",
+      "name": "Haldi Glow Mask — Natural Organic Face Pack",
+      "category": "Face Masks",
+      "subcategory": "Mask",
+      "key_ingredients": ["Turmeric (Haldi)", "Sandalwood", "Gram flour", "Honey powder"],
+      "skin_type": ["acne-prone", "dull", "combination"],
+      "benefits": ["Reduces blemishes", "Anti-inflammatory", "Even skin tone"],
+      "price_npr": 1199,
+      "stock_status": "in_stock",
+      "tags": ["acne", "ayurvedic", "vegan"],
+      "how_to_use": "Mix with milk, rose water, or plain water. Apply to face, leave for 15–20 minutes, rinse off. Avoid eye area.",
+      "usage_frequency": "1–2 times per week",
+      "shelf_life_months": 12,
+      "storage_tip": "Store in a cool, dry place. Avoid moisture contamination.",
+      "caution": "Turmeric may temporarily stain fair skin yellow — rinse thoroughly. Not recommended if allergic to any listed ingredient.",
+      "weight_grams": 100,
+      "packaging": "Sealed pouch / resealable pack"
+    },
+    {
+      "sku": "FM-MASK-GREENTEA",
+      "name": "Green Tea Mask",
+      "category": "Face Masks",
+      "subcategory": "Mask",
+      "key_ingredients": ["Green tea extract", "Aloe vera", "Kaolin clay"],
+      "skin_type": ["oily", "acne-prone", "combination"],
+      "benefits": ["Detoxifies", "Antioxidant rich", "Tightens pores"],
+      "price_npr": 1199,
+      "stock_status": "in_stock",
+      "tags": ["antioxidant", "detox", "vegan"],
+      "how_to_use": "Apply a thin layer on cleansed face. Leave for 10–15 minutes until dry. Rinse with cold water to tighten pores.",
+      "usage_frequency": "2 times per week",
+      "shelf_life_months": 12,
+      "storage_tip": "Avoid humidity. Keep sealed when not in use.",
+      "caution": "Avoid on broken or severely irritated skin. Patch test recommended.",
+      "weight_grams": 100,
+      "packaging": "Sealed pouch / resealable pack"
+    },
+    {
+      "sku": "FM-MASK-DARKCIRCLE",
+      "name": "Dark Circle Detox Mask — Natural Under-Eye Care",
+      "category": "Face Masks",
+      "subcategory": "Under-eye treatment",
+      "key_ingredients": ["Cucumber extract", "Coffee", "Vitamin E"],
+      "skin_type": ["all"],
+      "benefits": ["Reduces dark circles", "De-puffs", "Brightens under-eye area"],
+      "price_npr": 1199,
+      "stock_status": "in_stock",
+      "tags": ["under_eye", "targeted_care", "vegan"],
+      "how_to_use": "Apply a small amount under the eyes using fingertips or a flat brush. Leave for 10–15 minutes, rinse gently. Do not apply directly on eyelid.",
+      "usage_frequency": "3–4 times per week for best results",
+      "shelf_life_months": 12,
+      "storage_tip": "Store cool and dry. Keep away from children.",
+      "caution": "For external use only. Do not apply inside the eye. Patch test recommended especially for sensitive under-eye skin.",
+      "weight_grams": 75,
+      "packaging": "Sealed tube / jar"
+    },
+    {
+      "sku": "FM-TONER-SPRINKLE",
+      "name": "Sprinkle Gentle Organic Face Toner",
+      "category": "Face Toners",
+      "subcategory": "Toner",
+      "key_ingredients": ["Rose water", "Witch hazel", "Aloe vera", "Glycerin"],
+      "skin_type": ["all", "sensitive"],
+      "benefits": ["Balances pH", "Refreshes", "Preps skin for serum/moisturizer"],
+      "price_npr": 1999,
+      "stock_status": "in_stock",
+      "tags": ["bestseller", "daily_use", "vegan", "alcohol_free"],
+      "how_to_use": "Apply on a cotton pad and sweep across cleansed face after washing, or spritz directly. Use morning and night before moisturizer.",
+      "usage_frequency": "Twice daily (morning and night)",
+      "shelf_life_months": 18,
+      "storage_tip": "Keep away from direct sunlight. Can be refrigerated for a soothing cool effect.",
+      "caution": "Alcohol-free and suitable for sensitive skin. Patch test if first-time user.",
+      "weight_ml": 100,
+      "packaging": "Spray bottle"
+    },
+    {
+      "sku": "FM-SOAP-TURMERIC",
+      "name": "Turmeric Soap",
+      "category": "Soaps",
+      "subcategory": "Bar soap",
+      "key_ingredients": ["Turmeric", "Coconut oil", "Glycerin"],
+      "skin_type": ["acne-prone", "dull", "all"],
+      "benefits": ["Anti-bacterial", "Brightens", "Daily cleansing"],
+      "price_npr": 499,
+      "stock_status": "in_stock",
+      "tags": ["entry_price", "daily_use", "vegan"],
+      "how_to_use": "Lather with water and massage gently on face or body. Rinse well. For best results use twice daily.",
+      "usage_frequency": "Daily",
+      "shelf_life_months": 24,
+      "storage_tip": "Keep on a dry soap dish between uses to extend bar life.",
+      "caution": "May cause slight yellow tint on very fair skin — rinse thoroughly. Avoid contact with eyes.",
+      "weight_grams": 80,
+      "packaging": "Individually wrapped bar"
+    },
+    {
+      "sku": "FM-SOAP-NEEM",
+      "name": "Neem Soap",
+      "category": "Soaps",
+      "subcategory": "Bar soap",
+      "key_ingredients": ["Neem extract", "Coconut oil", "Tea tree"],
+      "skin_type": ["oily", "acne-prone", "sensitive"],
+      "benefits": ["Anti-bacterial", "Soothes acne", "Purifying"],
+      "price_npr": 499,
+      "stock_status": "in_stock",
+      "tags": ["entry_price", "acne", "vegan"],
+      "how_to_use": "Lather with water and massage on face or affected area. Rinse well. Ideal for twice-daily use or after gym/sweat exposure.",
+      "usage_frequency": "Daily",
+      "shelf_life_months": 24,
+      "storage_tip": "Keep on a dry soap dish. Avoid leaving submerged in water.",
+      "caution": "Do not use near eyes. If irritation occurs, discontinue use.",
+      "weight_grams": 80,
+      "packaging": "Individually wrapped bar"
+    },
+    {
+      "sku": "FM-COMBO-GLOW",
+      "name": "Glow Combo (Orange Scrub + Beetroot Mask)",
+      "category": "Combos",
+      "subcategory": "Routine bundle",
+      "includes_skus": ["FM-SCRUB-ORANGE", "FM-MASK-BEETROOT"],
+      "skin_type": ["dull", "normal", "combination"],
+      "benefits": ["Two-step glow routine", "Saves vs. buying separately"],
+      "price_npr": 1698,
+      "original_price_separately_npr": 1900,
+      "savings_npr": 202,
+      "stock_status": "in_stock",
+      "tags": ["combo", "starter", "value"]
+    },
+    {
+      "sku": "FM-COMBO-COMPLETE",
+      "name": "Complete Skincare Combo (Scrub + Mask + Toner + Soap)",
+      "category": "Combos",
+      "subcategory": "Full routine bundle",
+      "includes_skus": ["FM-SCRUB-ORANGE", "FM-MASK-HALDI", "FM-TONER-SPRINKLE", "FM-SOAP-TURMERIC"],
+      "skin_type": ["all"],
+      "benefits": ["Cleanse + exfoliate + mask + tone in one bundle", "Best value combo"],
+      "price_npr": 4398,
+      "original_price_separately_npr": 4647,
+      "savings_npr": 249,
+      "stock_status": "in_stock",
+      "tags": ["combo", "best_value", "gifting"]
+    }
+  ],
+  "size_guidance": {
+    "skin_match_advice": "We don't size by clothing — we match by skin type and concern. Always ask the customer's skin type (oily / dry / combination / sensitive / acne-prone) and primary concern (acne, dullness, dark circles, dryness) before recommending a product. If unsure, the Sprinkle Toner and Turmeric Soap are safe for all skin types.",
+    "patch_test_advice": "Recommend a 24-hour patch test on the inner arm before first use, especially for sensitive or reactive skin."
+  },
+  "product_recommendation_guide": {
+    "by_skin_type": {
+      "oily": ["FM-MASK-GREENTEA", "FM-SOAP-NEEM", "FM-TONER-SPRINKLE"],
+      "dry": ["FM-MASK-BEETROOT", "FM-TONER-SPRINKLE", "FM-SOAP-TURMERIC"],
+      "combination": ["FM-SCRUB-ORANGE", "FM-MASK-HALDI", "FM-TONER-SPRINKLE"],
+      "acne_prone": ["FM-SOAP-NEEM", "FM-MASK-HALDI", "FM-MASK-GREENTEA"],
+      "sensitive": ["FM-TONER-SPRINKLE", "FM-SOAP-NEEM"],
+      "dull": ["FM-SCRUB-ORANGE", "FM-MASK-BEETROOT", "FM-COMBO-GLOW"],
+      "normal": ["FM-SCRUB-ORANGE", "FM-MASK-BEETROOT", "FM-COMBO-GLOW"]
+    },
+    "by_concern": {
+      "dark_circles": ["FM-MASK-DARKCIRCLE"],
+      "acne": ["FM-SOAP-NEEM", "FM-MASK-HALDI", "FM-MASK-GREENTEA"],
+      "dullness_and_glow": ["FM-SCRUB-ORANGE", "FM-MASK-BEETROOT", "FM-COMBO-GLOW"],
+      "pigmentation": ["FM-MASK-BEETROOT", "FM-MASK-HALDI"],
+      "oily_pores": ["FM-MASK-GREENTEA", "FM-TONER-SPRINKLE"],
+      "daily_cleansing": ["FM-SOAP-TURMERIC", "FM-SOAP-NEEM"],
+      "full_routine_starter": ["FM-COMBO-COMPLETE"],
+      "gifting": ["FM-COMBO-COMPLETE", "FM-COMBO-GLOW"]
+    },
+    "safe_for_all_skin_types": ["FM-TONER-SPRINKLE", "FM-SOAP-TURMERIC", "FM-MASK-DARKCIRCLE"],
+    "beginner_entry_point": "Start with Turmeric Soap (NPR 499) + Sprinkle Toner (NPR 1,999) for a simple daily routine."
+  },
+  "skincare_routine_guides": {
+    "basic_morning_routine": [
+      "1. Cleanse with Turmeric Soap or Neem Soap",
+      "2. Tone with Sprinkle Toner",
+      "3. Apply moisturizer (customer's own)",
+      "4. Apply sunscreen SPF 30+ (customer's own — we always recommend sunscreen)"
+    ],
+    "basic_evening_routine": [
+      "1. Cleanse with Turmeric or Neem Soap",
+      "2. Apply face mask 1–2x per week (Beetroot, Haldi, or Green Tea based on skin type)",
+      "3. Tone with Sprinkle Toner",
+      "4. Apply night moisturizer or serum (customer's own)"
+    ],
+    "weekly_glow_routine": [
+      "Step 1 (Sun/Wed/Fri): Exfoliate with Orange Face Scrub after cleansing",
+      "Step 2 (Tue/Sat): Apply preferred face mask for 15–20 min",
+      "Step 3 (Daily): Toner morning and night"
+    ],
+    "sunscreen_advisory": "Fresh and More does not currently sell sunscreen. We always remind customers that using SPF 30+ sunscreen daily is essential for skin protection and to preserve the glow results from our products."
+  },
+  "current_offers": [
+    "Free shipping on orders above NPR 2,000 (anywhere in Nepal)",
+    "Free skin consultation over WhatsApp — share a clear photo and we'll suggest a routine",
+    "Combo bundles save vs. buying products individually (Glow Combo NPR 1,698 vs. NPR 1,900 separately)",
+    "Replies on WhatsApp +977-9802-342374 are typically same-business-day Sun–Fri"
+  ],
+  "promotions_and_discounts": {
+    "seasonal_offers": "Periodic discounts on festivals (Dashain, Tihar, Valentine's Day, International Women's Day). Announced on Instagram and Facebook pages first.",
+    "bulk_order_inquiry": "For bulk/wholesale orders (10+ units), customers should contact support@freshandmore.com.np or WhatsApp for special pricing.",
+    "gifting_packages": "Combo kits are popular gifts. Complete Skincare Combo (NPR 4,398) is the top gifting pick. Gift wrapping on request — mention in order notes or WhatsApp.",
+    "referral_policy": "No formal referral program currently. May be introduced in future — customers can follow Instagram for announcements.",
+    "student_or_influencer_collab": "For influencer collaborations or brand partnerships, direct to support@freshandmore.com.np with the subject line 'Collab Inquiry'.",
+    "discount_codes": "Discount codes are issued occasionally. If a customer has a code, they enter it at checkout on freshandmore.com.np. CSR cannot manually apply codes — codes only work via website checkout."
+  },
+  "locations": [
+    {
+      "name": "Fresh and More — Office / Pickup Point",
+      "address": "Ravibhawan, Kathmandu, Bagmati Province, Nepal",
+      "phone": "+977-9700-007762",
+      "hours": "Sun–Fri 10:00 AM – 6:00 PM (closed Saturday)",
+      "services": ["Order pickup", "In-person skin consultation by appointment"]
+    }
+  ],
+  "hours": {
+    "showroom": "Sun–Fri 10:00 AM – 6:00 PM Nepal time (closed Saturday)",
+    "service": "WhatsApp / phone support: Sun–Fri 10:00 AM – 6:00 PM Nepal time. Off-hours messages get a first reply by the next business morning.",
+    "whatsapp_response_window": "Sun–Fri 10:00 AM – 6:00 PM (typical reply within 1–2 hours during these hours)",
+    "social_dm_response_window": "Same window as WhatsApp; replies on Saturday and after-hours land the next business morning"
+  },
+  "ordering_process": {
+    "website_order_steps": [
+      "1. Browse products at freshandmore.com.np",
+      "2. Add items to cart",
+      "3. Enter shipping address and contact details",
+      "4. Apply discount code (if any)",
+      "5. Select payment method: Visa/Mastercard, eSewa, or Khalti",
+      "6. Place order and receive order confirmation via email/SMS"
+    ],
+    "whatsapp_order_steps": [
+      "1. Customer messages +977-9802-342374 with product name and quantity",
+      "2. CSR confirms availability and provides total including shipping",
+      "3. Customer confirms order details and delivery address",
+      "4. CSR shares payment instructions (eSewa / Khalti / bank transfer)",
+      "5. Customer sends payment screenshot",
+      "6. CSR confirms payment and dispatches within 1–2 working days"
+    ],
+    "order_confirmation": "Automatic email/SMS confirmation sent after successful website order. For WhatsApp orders, CSR manually confirms after payment verification.",
+    "order_modification": "Orders can be modified (product, quantity, address) only before dispatch. Contact WhatsApp immediately. Once dispatched, modification is not possible.",
+    "order_cancellation": "Cancellation before dispatch: full refund via original payment method. Cancellation after dispatch: not accepted — customer must follow return policy after receiving item."
+  },
+  "delivery_policy": {
+    "coverage": "All of Nepal",
+    "kathmandu_valley": {
+      "fee_npr": "Calculated at checkout (typically NPR 100–200)",
+      "free_threshold_npr": 2000,
+      "lead_time": "1–2 working days after dispatch"
+    },
+    "outside_valley": {
+      "fee_npr": "Calculated at checkout based on city",
+      "free_threshold_npr": 2000,
+      "lead_time": "3–7 working days via courier partner"
+    },
+    "international": "Not currently shipping outside Nepal",
+    "carrier_note": "Fresh and More is not responsible for delays caused by third-party courier partners — we will help track and resolve any issues.",
+    "dispatch_days": "Orders placed before 2:00 PM (Sun–Fri) are typically dispatched same day. Orders placed after 2:00 PM or on Saturday are dispatched the next working day.",
+    "tracking": "Tracking number/link shared via WhatsApp or SMS once order is dispatched. Customers can use the courier partner's portal to track live status.",
+    "delivery_failure": "If delivery fails due to wrong address, customer is responsible for re-delivery fee. If it fails due to courier error, Fresh and More arranges re-dispatch at no cost.",
+    "public_holidays": "Dispatch pauses on major public holidays (Dashain, Tihar, etc.). Customers are informed proactively via WhatsApp if their order is affected."
+  },
+  "payment_methods": [
+    "Visa / Mastercard (online)",
+    "eSewa",
+    "Khalti",
+    "Bank transfer on request (contact support)"
+  ],
+  "payment_details": {
+    "esewa_id": "Shared by CSR on request via WhatsApp — not publicly published",
+    "khalti_id": "Shared by CSR on request via WhatsApp — not publicly published",
+    "bank_transfer": "Account details shared via WhatsApp only after customer requests and CSR confirms order. Customer must send payment screenshot for confirmation.",
+    "payment_screenshot_required": true,
+    "payment_verification_time": "Typically within 1–2 hours during business hours (Sun–Fri 10AM–6PM).",
+    "failed_payment_handling": "If payment fails at checkout, advise customer to retry or switch payment method. If amount was debited but order not confirmed, customer should share screenshot and bank reference number with support."
+  },
+  "cod_policy": {
+    "available": false,
+    "note": "Cash on delivery is not currently offered. Customers pay online via Visa/Mastercard, eSewa, or Khalti at checkout. Bank transfer can be arranged on request via WhatsApp."
+  },
+  "return_and_exchange_policy": {
+    "window_days": 7,
+    "condition": "Returns accepted within 7 days of delivery for damaged or incorrect products. Item must be unused, sealed, and in original packaging.",
+    "non_returnable": ["Used / opened products (for hygiene reasons)", "Items past the 7-day window", "Combo items with one or more components opened"],
+    "exchange_policy": "Direct exchange is not standard policy. If an item is damaged or incorrect, it will be replaced after inspection.",
+    "refund_process": "Refunds are issued after inspection of the returned product. Refund is processed via the original payment method within 5–7 working days.",
+    "return_shipping": "Customer covers return shipping unless the item was defective or wrong-shipped — in that case Fresh and More covers it.",
+    "defects": "For damaged or wrong items, share a clear photo on WhatsApp +977-9802-342374 within 48 hours of delivery and we'll resolve it free of charge.",
+    "return_initiation_steps": [
+      "1. Customer contacts WhatsApp +977-9802-342374 within 7 days of delivery",
+      "2. Customer shares clear photos of item and packaging",
+      "3. CSR verifies eligibility and shares return shipping address (Ravibhawan, Kathmandu)",
+      "4. Customer ships item back",
+      "5. Fresh and More inspects within 2 working days of receipt",
+      "6. Refund or replacement processed within 5–7 working days"
+    ]
+  },
+  "complaint_handling": {
+    "escalation_tiers": {
+      "tier_1": "CSR handles directly: shipping delays, product questions, order status, payment confirmations, general skincare advice",
+      "tier_2": "Escalate to senior support or manager: damaged product claims with dispute, refund requests above NPR 3,000, repeated unresolved complaints, customer threatening public complaint"
+    },
+    "tone_under_pressure": "Always remain calm, empathetic, and solution-focused. Never argue. Acknowledge the inconvenience first, then offer a resolution path. Use phrases like 'I completely understand your frustration' and 'Let me check this right away for you'.",
+    "unresolvable_complaints": "If a complaint genuinely cannot be resolved at CSR level, escalate to support@freshandmore.com.np and inform the customer that the senior team will follow up within 1 working day.",
+    "negative_social_media_review": "If customer threatens or posts a negative review, acknowledge publicly (on the post) with 'We're sorry to hear this. Please message us on WhatsApp so we can make it right.' Do not argue publicly. Internally escalate for priority resolution.",
+    "fake_orders_or_fraud": "If a customer claims to have placed an order but it cannot be verified in the system, request order confirmation number and payment screenshot. Do not dispatch any replacement without verification."
+  },
+  "frequently_asked_questions": {
+    "are_products_cruelty_free": "Yes — all Fresh and More products are 100% cruelty-free. We do not test on animals at any stage.",
+    "are_products_vegan": "Yes — all products are fully vegan with no animal-derived ingredients.",
+    "are_products_safe_for_pregnant_women": "We recommend pregnant or breastfeeding customers consult their doctor before using any new skincare product, including ours.",
+    "are_products_suitable_for_teenagers": "Yes, our soaps and toner are suitable for teenagers. For face masks and scrubs, ages 14+ are fine. Always recommend a patch test.",
+    "can_men_use_the_products": "Absolutely! All products are skin-type based, not gender-specific.",
+    "are_products_suitable_for_sensitive_skin": "Yes — the Sprinkle Toner is specifically formulated for sensitive skin. Recommend patch testing all other products for very sensitive or reactive skin.",
+    "can_products_be_used_with_other_brands": "Generally yes. Advise customers to introduce one new product at a time and watch for reactions. We cannot speak to interactions with prescription skincare (direct to dermatologist).",
+    "do_products_expire": "Yes. Each product has a shelf life (typically 12–24 months). Manufacturing date and expiry are printed on the packaging.",
+    "what_is_the_smell_like": "Our products use natural botanical ingredients — light, fresh, and natural scents. No synthetic fragrances added.",
+    "do_you_have_a_physical_store": "We have an office and pickup point in Ravibhawan, Kathmandu (Sun–Fri, 10AM–6PM). It is not a retail store walk-in — primarily for pre-arranged pickups and consultations.",
+    "do_you_ship_internationally": "Not currently. We ship across all of Nepal only.",
+    "how_long_will_one_product_last": "Soaps: 3–5 weeks with daily use. Scrubs and masks (100g): 20–30 uses. Toner (100ml): approximately 1–2 months with daily use.",
+    "why_hasnt_my_order_arrived": "Check the tracking number shared by SMS/WhatsApp. If it shows delivered but not received, contact the courier first. If unresolved, WhatsApp us with your order ID and we'll follow up with the courier.",
+    "can_i_pick_up_my_order": "Yes — free pickup at Ravibhawan office, Sun–Fri 10AM–6PM. Mention 'pickup' at order or on WhatsApp so we prepare it.",
+    "do_you_offer_gift_wrapping": "Yes, on request. Mention in order notes or WhatsApp after placing your order.",
+    "is_there_a_loyalty_points_program": "Not currently. Repeat customers can ask about combo discounts and seasonal deals on WhatsApp.",
+    "what_if_i_receive_the_wrong_product": "Immediately share a photo on WhatsApp within 48 hours. We'll arrange a replacement at no cost.",
+    "my_product_smells_different_than_expected": "Natural products can have slight batch-to-batch variation in scent due to real botanical ingredients. If the smell seems unusual (very rancid or chemical), share a photo of the batch number and contact support.",
+    "can_i_use_multiple_masks_in_a_week": "Yes — you can alternate different masks on different days (e.g., Haldi mask Tuesday, Green Tea mask Saturday). Avoid using two masks on the same day.",
+    "does_the_turmeric_product_stain_skin": "Turmeric can leave a slight yellow tint — rinse thoroughly with lukewarm water. It fades quickly and is not permanent."
+  },
+  "csr_scripts": {
+    "greeting_english": "Hi! Welcome to Fresh and More 🌿 I'm here to help you with your skincare needs. How can I assist you today?",
+    "greeting_nepali_mixed": "Namaste didi/dai! Fresh and More maa swagat cha 🌿 Tapailai kasari help garna sakchu?",
+    "skin_consultation_opener": "To find the best product for you, could you tell me your skin type (oily / dry / combination / sensitive / acne-prone) and your main skin concern?",
+    "order_delay_response": "I'm sorry for the wait! Let me check the status of your order right away. Could you please share your order ID or the phone number used at checkout?",
+    "out_of_stock_response": "I'm so sorry, that product is currently out of stock. I'll make a note to notify you as soon as it's back. Would you like to explore a similar alternative in the meantime?",
+    "return_request_opener": "I'm sorry to hear that! To get this sorted for you quickly, could you please share a clear photo of the item and your order ID? We'll take it from there.",
+    "payment_issue_response": "I understand how stressful this can be. Please share a screenshot of the payment confirmation or bank transaction reference and I'll verify it immediately.",
+    "closing_english": "Is there anything else I can help you with? We're always here Sun–Fri, 10AM–6PM. Have a lovely day! ✨",
+    "closing_nepali_mixed": "Aaru kehi chaincha didi/dai? Hami Sun–Fri, 10AM–6PM samma huncha. Take care! ✨"
+  },
+  "loyalty_program": {
+    "name": "Not currently offered",
+    "note": "No formal loyalty / points program at the moment. Repeat customers are welcome to ask about combo discounts and seasonal promotions on WhatsApp."
+  },
+  "brand_voice": "Warm, knowledgeable, and wellness-focused — like a thoughtful skincare-savvy friend who genuinely cares about your skin. Lead with ingredients, skin-type fit, and gentle care advice — never hard-sell. Honor the brand's natural / vegan / cruelty-free positioning in every reply. Always ask the customer's skin type and primary concern before recommending. When the customer writes in Nepali or code-mixed, sprinkle in light Nepali honorifics (didi, dai, namaste) and mirror their formality. When the customer writes in pure English, reply in pure English with zero Nepali honorifics. Use 1 emoji max per reply, only when it fits (🌿 for natural, ✨ for glow). Never overpromise — say 'works best when used 2–3 times a week alongside sunscreen' rather than 'instant clear skin'. If the customer asks something we don't know (a specific ingredient interaction, a medical condition), recommend they consult a dermatologist first.",
+  "do_not_say": [
+    "Do not promise 'instant results' or 'guaranteed cure'",
+    "Do not make any medical claims (e.g., 'treats eczema', 'cures acne permanently')",
+    "Do not compare negatively with competitor brands by name",
+    "Do not confirm dispatch or payment before actual verification",
+    "Do not share eSewa / Khalti IDs publicly — only via direct WhatsApp",
+    "Do not disclose internal pricing, supplier names, or margin information",
+    "Do not promise a discount that hasn't been officially authorized"
+  ],
+  "escalation_contacts": {
+    "senior_support_email": "support@freshandmore.com.np",
+    "manager_whatsapp": "Contact internally — not given to customers directly",
+    "escalation_trigger_examples": [
+      "Customer disputes a refund after product was inspected",
+      "Delivery lost and courier unresponsive for 5+ days",
+      "Customer alleges allergic reaction or skin damage",
+      "Media or press inquiry",
+      "Bulk or wholesale order above NPR 20,000"
+    ]
+  },
+  "allergic_reaction_protocol": {
+    "immediate_response": "Express empathy immediately. Do not dismiss or minimize the complaint.",
+    "steps": [
+      "1. Ask customer to stop using the product immediately",
+      "2. Advise rinsing the affected area with cool water",
+      "3. Recommend they consult a dermatologist or doctor if reaction is severe",
+      "4. Request a photo of the affected area and product batch number",
+      "5. Escalate to senior support with full details",
+      "6. Do not admit product liability — escalate before any statement is made",
+      "7. Offer refund discussion after senior review"
+    ],
+    "legal_note": "Do not make any statements accepting product fault until senior support has reviewed. Express care and concern, not admission of fault."
+  },
+  "competitor_inquiry_handling": "If customers ask how Fresh and More compares to other brands, highlight our unique positioning: locally formulated for Nepali climate and skin types, 100% vegan and cruelty-free, Himalayan botanicals, no parabens. Do not name or disparage competitor brands.",
+  "social_media_guidelines": {
+    "instagram_handle": "@freshandmore.skin",
+    "facebook_page": "Fresh and More Nepal",
+    "dm_response_target": "Within same business day (Sun–Fri 10AM–6PM)",
+    "comment_response_guideline": "Respond to product questions in comments with helpful answers. For complaints or order issues, direct to WhatsApp: 'Hi [name], please message us on WhatsApp at +977-9802-342374 so we can sort this quickly!'",
+    "do_not_post": "Do not share order details, personal customer info, or payment information in public comments ever."
+  },
+  "high_value_threshold_npr": 4000,
+  "timezone": "Asia/Kathmandu",
+  "review_volume": "10,000+ happy customers, 15+ premium products, 100% natural / vegan / cruelty-free, made in Nepal. Active on Instagram (@freshandmore.skin) and Facebook (Fresh and More Nepal).",
+  "brand_certifications_and_claims": {
+    "vegan": true,
+    "cruelty_free": true,
+    "paraben_free": true,
+    "made_in_nepal": true,
+    "locally_sourced_botanicals": true,
+    "no_synthetic_fragrances": true,
+    "dermatologist_tested": false,
+    "organic_certified": "Products are formulated with organic and natural ingredients but do not currently carry a third-party organic certification badge.",
+    "note_for_csr": "When customers ask for certifications, confirm vegan, cruelty-free, paraben-free, and made in Nepal. If asked for official organic certification documents, clarify we use organic ingredients but are not third-party certified at this time."
+  },
+  "internal_csr_notes": {
+    "peak_season_alert": "Expect higher order volumes during Dashain/Tihar and Valentine's Day. Delivery lead times may extend by 1–2 days. Proactively communicate this to customers.",
+    "new_product_launches": "Announced first on Instagram. CSR should follow @freshandmore.skin to stay updated before customers ask.",
+    "stock_status_check": "If unsure about stock for a specific SKU, verify with the operations team via internal WhatsApp group before confirming to customer.",
+    "manual_order_log": "All WhatsApp orders must be logged in the order tracker sheet (link shared internally). Include: customer name, phone, product, quantity, address, payment status, dispatch date.",
+    "do_not_take_personal_orders": "Do not take personal orders, accept personal payments, or promise personal discounts without manager approval."
+  }
+}
