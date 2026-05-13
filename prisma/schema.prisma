@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Lead {
@@ -20,12 +19,14 @@ model Lead {
 model Message {
   id         String   @id @default(uuid())
   session_id String
-  role       String // 'user' or 'assistant'
-  content    String
+  role       String
+  content    String   @db.Text
   metadata   Json?
   timestamp  DateTime @default(now())
 
-  lead Lead @relation(fields: [session_id], references: [id])
+  lead Lead @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id, timestamp])
 }
 
 model TurnLog {
