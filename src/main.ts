@@ -7,7 +7,7 @@ import { AppConfigService } from './config/app-config.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('ai/v1');
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -18,23 +18,26 @@ async function bootstrap(): Promise<void> {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Chatblix Unified Inbox — LLM Pipeline API')
+    .setTitle('Chatblix AI Backend')
     .setDescription(
       [
-        'Three-stage LLM pipeline (Triage → Generator → Validator with one retry) for the Chatblix unified inbox.',
+        'Internal AI service called by the main backend.',
         '',
-        '- `POST /api/chat/stream` streams the reply as Server-Sent Events (recommended for live chat UIs).',
-        '- `POST /api/chat` returns the final reply as a single JSON payload.',
-        '- `GET /api/health` and `GET /api/health/pipeline` expose readiness and in-process metrics.',
+        '- `PUT /ai/v1/businesses/:id` — upsert a business profile (auth: bearer INTERNAL_API_TOKEN).',
+        '- `DELETE /ai/v1/businesses/:id` — soft-delete a business profile.',
+        '- `POST /ai/v1/reply` — generate a reply (or escalate / outside_hours) for one inbound message.',
+        '- `POST /ai/v1/reply/stream` — SSE-streamed reply (web widgets only).',
+        '- `GET /ai/v1/health` — liveness check, no auth.',
       ].join('\n'),
     )
     .setVersion('0.1.0')
-    .addTag('chat', 'Pipeline chat endpoints')
-    .addTag('health', 'Service health and pipeline metrics')
+    .addTag('businesses', 'Business profile push / delete')
+    .addTag('reply', 'Pipeline reply endpoints')
+    .addTag('health', 'Service health')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
+  SwaggerModule.setup('ai/v1/docs', app, document, {
     swaggerOptions: { persistAuthorization: true, displayRequestDuration: true },
   });
 
@@ -43,8 +46,8 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port);
   const logger = new Logger('Bootstrap');
-  logger.log(`chatblix nest-backend listening on http://localhost:${port}`);
-  logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.log(`chatblix ai-backend listening on http://localhost:${port}`);
+  logger.log(`Swagger docs available at http://localhost:${port}/ai/v1/docs`);
 }
 
 bootstrap().catch((e) => {

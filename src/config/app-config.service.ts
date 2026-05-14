@@ -65,4 +65,12 @@ export class AppConfigService {
   maxRetries(): number {
     return this.config.get('PIPELINE_MAX_RETRIES', { infer: true });
   }
+
+  maxHistoryTurns(): number {
+    return this.config.get('MAX_HISTORY_TURNS', { infer: true });
+  }
+
+  maxRequestBytes(): number {
+    return this.config.get('MAX_REQUEST_BYTES', { infer: true });
+  }
 }

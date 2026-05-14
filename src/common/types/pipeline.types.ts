@@ -103,6 +103,8 @@ export type PipelineEventName =
   | 'token'
   | 'regenerate'
   | 'verdict'
+  | 'escalate'
+  | 'outside_hours'
   | 'done'
   | 'error'
   | '_done_internal';
@@ -134,4 +136,6 @@ export interface DoneInternalData {
   triage: Triage;
   attempts: PipelineAttempt[];
   lastEmittedReplyLen: number;
+  escalated?: { reason: string; matched_trigger?: string };
+  duration_ms: number;
 }

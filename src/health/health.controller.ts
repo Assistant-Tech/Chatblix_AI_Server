@@ -1,57 +1,31 @@
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { AppConfigService } from '../config/app-config.service';
 import { Public } from '../auth/public.decorator';
-import { MetricsService } from '../pipeline/metrics.service';
-import { HealthResponseDto, PipelineHealthResponseDto } from '../common/types/chat.dto';
+
+interface HealthResponse {
+  status: 'ok';
+  uptime_s: number;
+  version: string;
+}
+
+const VERSION = process.env.npm_package_version || '0.1.0';
+const BOOT_TIME_MS = Date.now();
 
 @ApiTags('health')
 @Public()
 @Controller('health')
 export class HealthController {
-  constructor(
-    private readonly config: AppConfigService,
-    private readonly metrics: MetricsService,
-  ) {}
-
   @Get()
   @ApiOperation({
-    summary: 'Liveness + configuration check',
-    description: 'Returns 200 with current model + KB config when `OPENROUTER_API_KEY` is set, 502 otherwise.',
+    summary: 'Liveness check.',
+    description: 'Used by load balancers and the main backend circuit breaker. No auth.',
   })
-  @ApiResponse({ status: 200, description: 'Service ready.', type: HealthResponseDto })
-  @ApiResponse({ status: 502, description: '`OPENROUTER_API_KEY` is not configured.' })
-  health(): HealthResponseDto {
-    if (!this.config.openrouterKey()) {
-      throw new HttpException(
-        { ok: false, error: 'OPENROUTER_API_KEY not set' },
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
+  @ApiResponse({ status: 200, description: '{ status, uptime_s, version }' })
+  health(): HealthResponse {
     return {
-      ok: true,
-      model: this.config.legacyModel(),
-      provider: 'openrouter',
-      pipeline_enabled: this.config.isPipelineEnabled(),
-    };
-  }
-
-  @Get('pipeline')
-  @ApiOperation({
-    summary: 'Pipeline configuration + in-process metrics snapshot',
-    description:
-      'Returns the stage models currently in use and counters since boot (total_turns, pass/retry/ship breakdowns, validator soft-pass count, violations_by_rule). For persistent aggregation query the `TurnLog` table directly.',
-  })
-  @ApiResponse({ status: 200, description: 'Pipeline snapshot.', type: PipelineHealthResponseDto })
-  pipeline(): PipelineHealthResponseDto {
-    return {
-      enabled: this.config.isPipelineEnabled(),
-      models: {
-        triage: this.config.triageModel(),
-        generator: this.config.generatorModel(),
-        validator: this.config.validatorModel(),
-      },
-      counters: this.metrics.snapshot() as unknown as Record<string, unknown>,
+      status: 'ok',
+      uptime_s: Math.floor((Date.now() - BOOT_TIME_MS) / 1000),
+      version: VERSION,
     };
   }
 }

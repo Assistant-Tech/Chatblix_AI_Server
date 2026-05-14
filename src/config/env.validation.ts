@@ -71,6 +71,16 @@ export class EnvSchema {
   @IsInt()
   @Min(0)
   PIPELINE_MAX_RETRIES: number = 1;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  MAX_HISTORY_TURNS: number = 10;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1024)
+  MAX_REQUEST_BYTES: number = 262144;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvSchema {

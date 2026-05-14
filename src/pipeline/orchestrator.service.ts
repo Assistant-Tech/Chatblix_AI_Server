@@ -7,6 +7,7 @@ import { ValidatorService } from './validator.service';
 import { ResponseCleanerService } from './response-cleaner.service';
 import { ToneCheckerService } from './tone-checker.service';
 import { SafetyFilterService } from './safety-filter.service';
+import { EscalationRulesService } from './escalation-rules.service';
 import { MetricsService } from './metrics.service';
 import { severityScore, verdictPasses } from '../common/utils/pipeline/severity';
 import { parsePartialAgentOutput } from '../common/utils/parser';
@@ -36,6 +37,7 @@ export class PipelineOrchestratorService {
     private readonly cleaner: ResponseCleanerService,
     private readonly tone: ToneCheckerService,
     private readonly safety: SafetyFilterService,
+    private readonly escalation: EscalationRulesService,
     private readonly metrics: MetricsService,
   ) {}
 
@@ -97,6 +99,34 @@ export class PipelineOrchestratorService {
       stalledCountIncoming,
     });
     yield { event: 'triage', data: triage };
+
+    // --- Stage 1.5: Escalation rules (keyword + triage handoff). Short-circuits the generator. ---
+    const escalation = this.escalation.check(message, ctx.history, ctx.profile, triage);
+    if (escalation.escalate) {
+      const handoffText =
+        ctx.profile.escalation?.handoff_message ||
+        this.synthesizeHandoffCandidate(triage, priorAssistantLang).replace(/<[^>]+>/g, '');
+      const shipped = wrapHandoff(handoffText, escalation.reason);
+      yield {
+        event: 'escalate',
+        data: {
+          reason: escalation.reason,
+          matched_trigger: escalation.matched_trigger,
+        },
+      };
+      const done: DoneInternalData = {
+        turn_id: turnId,
+        shipped,
+        outcome: 'escalate',
+        triage,
+        attempts: [],
+        lastEmittedReplyLen: 0,
+        escalated: { reason: escalation.reason ?? 'unknown', matched_trigger: escalation.matched_trigger },
+        duration_ms: Date.now() - tStart,
+      };
+      yield { event: '_done_internal', data: done };
+      return;
+    }
 
     // --- Stage 2 + 3: Generator → Validator + Tone + Safety, up to maxRetries+1 attempts ---
     const attempts: PipelineAttempt[] = [];
@@ -246,12 +276,9 @@ export class PipelineOrchestratorService {
       },
     };
 
-    // TurnLog write lands in Phase 5.3 (ReplyService) — it has the business_id,
+    // TurnLog write lives in ReplyService (5.3) — it has the business_id,
     // conversation_id, contact_id, channel needed to populate the new TurnLog
     // schema. Orchestrator just returns the data.
-    void turnId;
-    void tStart;
-
     const done: DoneInternalData = {
       turn_id: turnId,
       shipped,
@@ -259,6 +286,7 @@ export class PipelineOrchestratorService {
       triage,
       attempts,
       lastEmittedReplyLen,
+      duration_ms: Date.now() - tStart,
     };
     yield { event: '_done_internal', data: done };
   }
@@ -308,4 +336,14 @@ function extractReplyText(candidate: string): string {
   if (!candidate) return '';
   const m = /<reply>([\s\S]*?)<\/reply>/i.exec(candidate);
   return m ? m[1] : candidate;
+}
+
+function wrapHandoff(text: string, reason: string | undefined): string {
+  const metadata = {
+    next_step: 'escalate',
+    handoff_required: true,
+    handoff_context: `escalation:${reason ?? 'unknown'}`,
+    tags: ['escalate', reason ?? 'unknown'],
+  };
+  return `<reply>${text}</reply><metadata>${JSON.stringify(metadata)}</metadata>`;
 }
