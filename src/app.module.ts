@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { BusinessModule } from './business/business.module';
 import { PipelineModule } from './pipeline/pipeline.module';
 import { ReplyModule } from './reply/reply.module';
+import { InternalModule } from './internal/internal.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { HealthModule } from './health/health.module';
     BusinessModule,
     PipelineModule,
     ReplyModule,
+    InternalModule,
     HealthModule,
   ],
 })

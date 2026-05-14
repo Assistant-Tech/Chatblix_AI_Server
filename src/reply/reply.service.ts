@@ -4,6 +4,7 @@ import { HoursService } from '../pipeline/hours.service';
 import { PipelineOrchestratorService } from '../pipeline/orchestrator.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../config/app-config.service';
+import { RequestDedupeService } from '../cache/request-dedupe.service';
 import { parseAgentOutput } from '../common/utils/parser';
 import { highCount } from '../common/utils/pipeline/severity';
 import type {
@@ -45,11 +46,23 @@ export class ReplyService {
     private readonly orchestrator: PipelineOrchestratorService,
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
+    private readonly dedupe: RequestDedupeService,
   ) {}
 
   /** Non-streaming entry point — `POST /ai/v1/reply`. */
   async handle(req: ReplyRequestDto): Promise<ReplyResponse> {
     const start = Date.now();
+    const requestId = req.options?.request_id;
+
+    // Idempotency dedupe: same request_id within 60s returns the cached payload.
+    if (requestId) {
+      const cached = await this.dedupe.getCached<ReplyResponse>(requestId);
+      if (cached) {
+        this.logger.log(`dedupe.hit request_id=${requestId}`);
+        return cached;
+      }
+    }
+
     const ctx = await this.contextLoader.load({
       business_id: req.business_id,
       history: req.history,
@@ -68,11 +81,14 @@ export class ReplyService {
         },
       };
       await this.logOutsideHours(req, ctx, response);
+      if (requestId) await this.dedupe.storeOnce(requestId, response);
       return response;
     }
 
     const collected = await this.runPipeline(req, ctx);
-    return this.buildResponse(req, ctx, collected, start);
+    const response = await this.buildResponse(req, ctx, collected, start);
+    if (requestId) await this.dedupe.storeOnce(requestId, response);
+    return response;
   }
 
   /** Streaming entry point — `POST /ai/v1/reply/stream`. Yields token chunks then a done chunk. */
