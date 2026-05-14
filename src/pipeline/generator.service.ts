@@ -4,7 +4,7 @@ import { OpenRouterClient, OpenRouterError } from './openrouter.client';
 import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import type {
-  HistoryMessage,
+  ContextPacket,
   Triage,
   Violation,
 } from '../common/types/pipeline.types';
@@ -15,12 +15,11 @@ export interface GeneratorFeedback {
 }
 
 export interface StreamGeneratorInput {
+  ctx: ContextPacket;
   message: string;
-  history: HistoryMessage[];
-  customerContext: Record<string, unknown>;
   triage: Triage;
   feedback: GeneratorFeedback | null;
-  kbFile: string;
+  customerContext: Record<string, unknown>;
 }
 
 @Injectable()
@@ -34,20 +33,13 @@ export class GeneratorService {
     private readonly metrics: MetricsService,
   ) {}
 
-  private buildUserPayload(args: {
-    message: string;
-    history: HistoryMessage[];
-    customerContext: Record<string, unknown>;
-    businessContext: unknown;
-    triage: Triage;
-    feedback: GeneratorFeedback | null;
-  }): string {
-    const { message, history, customerContext, businessContext, triage, feedback } = args;
+  private buildUserPayload(args: StreamGeneratorInput): string {
+    const { ctx, message, customerContext, triage, feedback } = args;
     const parts = [
       `LATEST_MESSAGE: ${message}`,
-      `CONVERSATION_HISTORY: ${JSON.stringify(history || [])}`,
+      `CONVERSATION_HISTORY: ${JSON.stringify(ctx.history || [])}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
-      `BUSINESS_CONTEXT: ${JSON.stringify(businessContext)}`,
+      `BUSINESS_CONTEXT: ${JSON.stringify(ctx.profile)}`,
       `TRIAGE: ${JSON.stringify(triage)}`,
     ];
     if (feedback) {
@@ -57,24 +49,13 @@ export class GeneratorService {
   }
 
   async *streamGenerator(input: StreamGeneratorInput): AsyncGenerator<string> {
-    const { message, history, customerContext, triage, feedback, kbFile } = input;
+    const { ctx, feedback } = input;
     const model = this.config.generatorModel();
     const isRetry = Boolean(feedback);
     const temperature = isRetry ? 0.4 : 0.7;
 
-    const [system, businessContext] = await Promise.all([
-      this.prompts.getGeneratorPrompt(kbFile),
-      this.prompts.getBusinessContext(kbFile),
-    ]);
-
-    const user = this.buildUserPayload({
-      message,
-      history,
-      customerContext,
-      businessContext,
-      triage,
-      feedback,
-    });
+    const system = await this.prompts.getGeneratorPrompt(ctx.profile.name);
+    const user = this.buildUserPayload(input);
 
     let chunkCount = 0;
     let totalLen = 0;

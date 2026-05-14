@@ -71,9 +71,6 @@ export class HealthResponseDto {
   @ApiProperty({ example: 'anthropic/claude-haiku-4.5' })
   model!: string;
 
-  @ApiProperty({ example: 'fresh-and-more.json' })
-  kb_file!: string;
-
   @ApiProperty({ example: 'openrouter' })
   provider!: string;
 

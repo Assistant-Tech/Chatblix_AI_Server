@@ -5,17 +5,17 @@ import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isVerdictShape } from '../common/utils/pipeline/contracts';
 import type {
-  HistoryMessage,
+  ContextPacket,
   Triage,
   Verdict,
 } from '../common/types/pipeline.types';
 
 export interface CallValidatorInput {
+  ctx: ContextPacket;
   message: string;
-  history: HistoryMessage[];
-  customerContext: Record<string, unknown>;
   triage: Triage;
   candidate: string;
+  customerContext: Record<string, unknown>;
 }
 
 @Injectable()
@@ -30,11 +30,12 @@ export class ValidatorService {
   ) {}
 
   private buildUserPayload(input: CallValidatorInput): string {
-    const { message, history, customerContext, triage, candidate } = input;
+    const { ctx, message, customerContext, triage, candidate } = input;
     return [
       `LATEST_MESSAGE: ${message}`,
-      `CONVERSATION_HISTORY: ${JSON.stringify(history || [])}`,
+      `CONVERSATION_HISTORY: ${JSON.stringify(ctx.history || [])}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
+      `BUSINESS_CONTEXT: ${JSON.stringify(ctx.profile)}`,
       `TRIAGE: ${JSON.stringify(triage)}`,
       `CANDIDATE: ${candidate}`,
     ].join('\n\n');

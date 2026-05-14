@@ -30,10 +30,6 @@ export class AppConfigService {
     return this.config.get('OPENROUTER_MODEL', { infer: true });
   }
 
-  kbFile(): string {
-    return this.config.get('KB_FILE', { infer: true });
-  }
-
   isPipelineEnabled(): boolean {
     return this.config.get('USE_MULTI_MODEL_PIPELINE', { infer: true });
   }

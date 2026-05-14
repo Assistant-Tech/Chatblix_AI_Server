@@ -6,19 +6,18 @@ import { MetricsService } from './metrics.service';
 import { extractJsonObject, isTriageShape } from '../common/utils/pipeline/contracts';
 import { synthesizeFallbackTriage } from '../common/utils/pipeline/triage-fallback';
 import type {
-  HistoryMessage,
+  ContextPacket,
   LanguageCode,
   Triage,
 } from '../common/types/pipeline.types';
 
 export interface CallTriageInput {
+  ctx: ContextPacket;
   message: string;
-  history: HistoryMessage[];
-  customerContext: Record<string, unknown>;
   priorAssistantLang: LanguageCode | null;
   priorAgentQuestion: string | null;
   stalledCountIncoming: number;
-  kbFile: string;
+  customerContext: Record<string, unknown>;
 }
 
 @Injectable()
@@ -33,11 +32,12 @@ export class TriageService {
   ) {}
 
   private buildUserPayload(input: CallTriageInput): string {
-    const { message, history, customerContext, priorAssistantLang, priorAgentQuestion, stalledCountIncoming } = input;
+    const { ctx, message, customerContext, priorAssistantLang, priorAgentQuestion, stalledCountIncoming } = input;
     return [
       `LATEST_MESSAGE: ${message}`,
-      `CONVERSATION_HISTORY: ${JSON.stringify(history || [])}`,
+      `CONVERSATION_HISTORY: ${JSON.stringify(ctx.history || [])}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
+      `BUSINESS_CONTEXT: ${JSON.stringify(ctx.profile)}`,
       `PRIOR_ASSISTANT_LANGUAGE: ${priorAssistantLang || 'null'}`,
       `PRIOR_AGENT_QUESTION: ${priorAgentQuestion ? JSON.stringify(priorAgentQuestion) : 'null'}`,
       `STALLED_COUNT_INCOMING: ${stalledCountIncoming || 0}`,
@@ -62,11 +62,11 @@ export class TriageService {
 
   async callTriage(input: CallTriageInput): Promise<Triage> {
     const model = this.config.triageModel();
-    const { priorAssistantLang, stalledCountIncoming, kbFile } = input;
+    const { ctx, priorAssistantLang, stalledCountIncoming } = input;
 
     let system: string;
     try {
-      system = await this.prompts.getTriagePrompt(kbFile);
+      system = await this.prompts.getTriagePrompt(ctx.profile.name);
     } catch (e) {
       this.metrics.bump('triage_synthesized_fallback');
       return synthesizeFallbackTriage({

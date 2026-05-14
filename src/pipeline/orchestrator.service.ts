@@ -4,6 +4,9 @@ import { AppConfigService } from '../config/app-config.service';
 import { TriageService } from './triage.service';
 import { GeneratorService } from './generator.service';
 import { ValidatorService } from './validator.service';
+import { ResponseCleanerService } from './response-cleaner.service';
+import { ToneCheckerService } from './tone-checker.service';
+import { SafetyFilterService } from './safety-filter.service';
 import { MetricsService } from './metrics.service';
 import { severityScore, verdictPasses } from '../common/utils/pipeline/severity';
 import { parsePartialAgentOutput } from '../common/utils/parser';
@@ -15,7 +18,11 @@ import type {
   StreamTurnInput,
   Triage,
   Verdict,
+  Violation,
 } from '../common/types/pipeline.types';
+
+const TONE_RULE_ID = 90;
+const SAFETY_RULE_ID = 91;
 
 @Injectable()
 export class PipelineOrchestratorService {
@@ -26,6 +33,9 @@ export class PipelineOrchestratorService {
     private readonly triage: TriageService,
     private readonly generator: GeneratorService,
     private readonly validator: ValidatorService,
+    private readonly cleaner: ResponseCleanerService,
+    private readonly tone: ToneCheckerService,
+    private readonly safety: SafetyFilterService,
     private readonly metrics: MetricsService,
   ) {}
 
@@ -65,14 +75,12 @@ export class PipelineOrchestratorService {
 
   async *streamTurn(input: StreamTurnInput): AsyncGenerator<PipelineEvent> {
     const {
+      ctx,
       message,
-      history,
       customerContext,
       priorAssistantLang,
       priorAgentQuestion,
       stalledCountIncoming,
-      kbFile,
-      sessionId,
     } = input;
 
     const turnId = randomUUID();
@@ -81,17 +89,16 @@ export class PipelineOrchestratorService {
 
     // --- Stage 1: Triage ---
     const triage = await this.triage.callTriage({
+      ctx,
       message,
-      history,
       customerContext,
       priorAssistantLang,
       priorAgentQuestion,
       stalledCountIncoming,
-      kbFile,
     });
     yield { event: 'triage', data: triage };
 
-    // --- Stage 2 + 3: Generator → Validator, up to maxRetries+1 attempts ---
+    // --- Stage 2 + 3: Generator → Validator + Tone + Safety, up to maxRetries+1 attempts ---
     const attempts: PipelineAttempt[] = [];
     const limit = this.config.maxRetries() + 1;
     let lastEmittedReplyLen = 0;
@@ -121,12 +128,11 @@ export class PipelineOrchestratorService {
       let prefixDecided = false;
       try {
         for await (const chunk of this.generator.streamGenerator({
+          ctx,
           message,
-          history,
           customerContext,
           triage,
           feedback,
-          kbFile,
         })) {
           candidate += chunk;
 
@@ -182,16 +188,19 @@ export class PipelineOrchestratorService {
       }
 
       const verdict: Verdict = await this.validator.callValidator({
+        ctx,
         message,
-        history,
         customerContext,
         triage,
         candidate,
       });
 
-      attempts.push({ attempt_idx: attemptIdx, candidate, verdict });
+      // Compose tone + safety violations on top of the validator verdict.
+      const composed = this.composeVerdict(candidate, ctx.profile, verdict);
 
-      if (verdictPasses(verdict)) break;
+      attempts.push({ attempt_idx: attemptIdx, candidate, verdict: composed });
+
+      if (verdictPasses(composed)) break;
     }
 
     // --- Pick what to ship ---
@@ -237,8 +246,9 @@ export class PipelineOrchestratorService {
       },
     };
 
-    // TurnLog write moved out: Phase 4.8 rebuilds this against the new
-    // TurnLog schema (business_id / conversation_id / token fields).
+    // TurnLog write lands in Phase 5.3 (ReplyService) — it has the business_id,
+    // conversation_id, contact_id, channel needed to populate the new TurnLog
+    // schema. Orchestrator just returns the data.
     void turnId;
     void tStart;
 
@@ -252,4 +262,50 @@ export class PipelineOrchestratorService {
     };
     yield { event: '_done_internal', data: done };
   }
+
+  private composeVerdict(
+    candidate: string,
+    profile: StreamTurnInput['ctx']['profile'],
+    verdict: Verdict,
+  ): Verdict {
+    const replyText = extractReplyText(candidate);
+    const cleaned = this.cleaner.clean(replyText);
+    const tone = this.tone.check(cleaned, profile);
+    const safety = this.safety.check(cleaned);
+
+    if (tone.pass && safety.pass) return verdict;
+
+    const added: Violation[] = [];
+    for (const t of tone.violations) {
+      added.push({
+        rule_id: TONE_RULE_ID,
+        rule_name: 'tone.dont_match',
+        severity: 'high',
+        evidence: t,
+        fix_hint: 'Rephrase without the banned phrase or pattern.',
+      });
+    }
+    for (const s of safety.violations) {
+      added.push({
+        rule_id: SAFETY_RULE_ID,
+        rule_name: 'safety.pii_leak',
+        severity: 'high',
+        evidence: s,
+        fix_hint: 'Remove the PII; redirect the customer to provide it through a secure channel.',
+      });
+    }
+
+    return {
+      ...verdict,
+      pass: false,
+      _soft_pass: false,
+      violations: [...(verdict.violations ?? []), ...added],
+    };
+  }
+}
+
+function extractReplyText(candidate: string): string {
+  if (!candidate) return '';
+  const m = /<reply>([\s\S]*?)<\/reply>/i.exec(candidate);
+  return m ? m[1] : candidate;
 }

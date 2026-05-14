@@ -5,8 +5,7 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "assets": [
-      { "include": "pipeline/prompts/*.md", "outDir": "dist" },
-      { "include": "pipeline/kb/*.json", "outDir": "dist" }
+      { "include": "pipeline/prompts/*.md", "outDir": "dist" }
     ],
     "watchAssets": true
   }

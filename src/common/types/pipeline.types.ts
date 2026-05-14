@@ -75,6 +75,28 @@ export interface HistoryMessage {
   timestamp?: Date;
 }
 
+// Wire-shape history message — as it arrives in a ReplyRequest body.
+// timestamp is an ISO string; ContextLoader is responsible for any conversion.
+export interface IncomingHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
+// The single bag of data every pipeline stage receives.
+// No service inside the pipeline should re-read DB / files / caches —
+// ContextLoader is the only place that hydrates this.
+export interface ContextPacket {
+  business_id: string;
+  profile: import('./business-profile.dto').BusinessProfileDto;
+  systemPrompt: string;
+  history: IncomingHistoryMessage[];
+  contact_id: string;
+  channel: string;
+  trace_id?: string;
+}
+
 export type PipelineEventName =
   | 'metadata'
   | 'triage'
@@ -97,14 +119,12 @@ export interface PipelineAttempt {
 }
 
 export interface StreamTurnInput {
+  ctx: ContextPacket;
   message: string;
-  history: HistoryMessage[];
   customerContext: Record<string, unknown>;
   priorAssistantLang: LanguageCode | null;
   priorAgentQuestion: string | null;
   stalledCountIncoming: number;
-  kbFile: string;
-  sessionId: string;
 }
 
 export interface DoneInternalData {

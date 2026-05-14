@@ -31,7 +31,6 @@ export class HealthController {
     return {
       ok: true,
       model: this.config.legacyModel(),
-      kb_file: this.config.kbFile(),
       provider: 'openrouter',
       pipeline_enabled: this.config.isPipelineEnabled(),
     };

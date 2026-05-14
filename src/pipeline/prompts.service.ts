@@ -8,36 +8,18 @@ interface CachedPrompts {
   validator: string;
 }
 
-export interface BusinessContext {
-  business_name?: string;
-  industry?: string;
-  product_catalog?: unknown;
-  locations?: unknown;
-  hours?: unknown;
-  delivery_policy?: unknown;
-  payment_methods?: unknown;
-  current_offers?: unknown;
-  brand_voice?: unknown;
-  high_value_threshold_npr?: number;
-  timezone?: string;
-  channels?: unknown;
-  size_chart_url?: string;
-  size_guidance?: unknown;
-  cod_policy?: unknown;
-  return_and_exchange_policy?: unknown;
-  loyalty_program?: unknown;
-  emi_options?: unknown;
-  [key: string]: unknown;
-}
-
+/**
+ * Loads the legacy stage instruction markdown files. These still contain
+ * Nepal-specific persona / tone content — Task 2.2a will split that out
+ * into BusinessProfile fields. Until then we just substitute the business
+ * name and ship the rest verbatim.
+ */
 @Injectable()
 export class PromptsService implements OnModuleInit {
   private readonly logger = new Logger(PromptsService.name);
   private cached: CachedPrompts | null = null;
-  private readonly kbCache = new Map<string, BusinessContext & Record<string, unknown>>();
 
   private readonly PROMPT_DIR = join(__dirname, 'prompts');
-  private readonly KB_DIR = join(__dirname, 'kb');
 
   async onModuleInit(): Promise<void> {
     try {
@@ -60,57 +42,22 @@ export class PromptsService implements OnModuleInit {
     return this.cached;
   }
 
-  private async loadKb(kbFileName: string): Promise<BusinessContext & Record<string, unknown>> {
-    const cached = this.kbCache.get(kbFileName);
-    if (cached) return cached;
-    const raw = await readFile(join(this.KB_DIR, kbFileName), 'utf-8');
-    const kb = JSON.parse(raw) as BusinessContext & Record<string, unknown>;
-    this.kbCache.set(kbFileName, kb);
-    return kb;
+  private substitute(template: string, businessName: string): string {
+    return template.replaceAll('{{BUSINESS_NAME}}', businessName || 'the business');
   }
 
-  private substitute(template: string, kb: BusinessContext): string {
-    return template.replaceAll('{{BUSINESS_NAME}}', kb.business_name || 'the business');
-  }
-
-  async getTriagePrompt(kbFileName: string): Promise<string> {
+  async getTriagePrompt(businessName: string): Promise<string> {
     const { triage } = await this.loadAll();
-    const kb = await this.loadKb(kbFileName);
-    return this.substitute(triage, kb);
+    return this.substitute(triage, businessName);
   }
 
-  async getGeneratorPrompt(kbFileName: string): Promise<string> {
+  async getGeneratorPrompt(businessName: string): Promise<string> {
     const { generator } = await this.loadAll();
-    const kb = await this.loadKb(kbFileName);
-    return this.substitute(generator, kb);
+    return this.substitute(generator, businessName);
   }
 
   async getValidatorPrompt(): Promise<string> {
     const { validator } = await this.loadAll();
     return validator;
-  }
-
-  async getBusinessContext(kbFileName: string): Promise<BusinessContext> {
-    const kb = await this.loadKb(kbFileName);
-    return {
-      business_name: kb.business_name,
-      industry: kb.industry,
-      product_catalog: kb.product_catalog,
-      locations: kb.locations,
-      hours: kb.hours,
-      delivery_policy: kb.delivery_policy,
-      payment_methods: kb.payment_methods,
-      current_offers: kb.current_offers,
-      brand_voice: kb.brand_voice,
-      high_value_threshold_npr: kb.high_value_threshold_npr as number | undefined,
-      timezone: kb.timezone as string | undefined,
-      channels: kb.channels,
-      size_chart_url: kb.size_chart_url as string | undefined,
-      size_guidance: kb.size_guidance,
-      cod_policy: kb.cod_policy,
-      return_and_exchange_policy: kb.return_and_exchange_policy,
-      loyalty_program: kb.loyalty_program,
-      emi_options: kb.emi_options,
-    };
   }
 }

@@ -33,10 +33,6 @@ export class EnvSchema {
   OPENROUTER_MODEL: string = 'anthropic/claude-haiku-4.5';
 
   @IsOptional()
-  @IsString()
-  KB_FILE: string = 'fresh-and-more.json';
-
-  @IsOptional()
   @IsBoolean()
   USE_MULTI_MODEL_PIPELINE: boolean = true;
 
