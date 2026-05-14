@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -16,6 +17,13 @@ export class EnvSchema {
 
   @IsString()
   DATABASE_URL!: string;
+
+  @IsString()
+  REDIS_URL!: string;
+
+  @IsString()
+  @MinLength(32)
+  INTERNAL_API_TOKEN!: string;
 
   @IsString()
   OPENROUTER_API_KEY!: string;

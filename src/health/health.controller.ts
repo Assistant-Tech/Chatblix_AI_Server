@@ -1,10 +1,12 @@
 import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AppConfigService } from '../config/app-config.service';
+import { Public } from '../auth/public.decorator';
 import { MetricsService } from '../pipeline/metrics.service';
 import { HealthResponseDto, PipelineHealthResponseDto } from '../common/types/chat.dto';
 
 @ApiTags('health')
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(

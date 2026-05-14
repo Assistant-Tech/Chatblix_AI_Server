@@ -6,45 +6,52 @@ datasource db {
   provider = "postgresql"
 }
 
-model Lead {
-  id             String    @id
-  lead_score     Int       @default(0)
-  stage          String    @default("new")
-  extracted_data Json      @default("{}")
-  last_intent    String?
-  updated_at     DateTime  @updatedAt
-  messages       Message[]
+// The cached snapshot of a tenant's profile, pushed by main backend
+// via PUT /ai/v1/businesses/{id}. Main backend is the source of truth;
+// this is a synced replica that exists only to feed the prompt compiler.
+model BusinessProfile {
+  id          String   @id
+  name        String
+  description String
+  language    String   @default("en")
+  tone        Json
+  hours       Json
+  faqs        Json
+  policies    Json
+  escalation  Json
+  version     Int      @default(1)
+  active      Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 }
 
-model Message {
-  id         String   @id @default(uuid())
-  session_id String
-  role       String
-  content    String   @db.Text
-  metadata   Json?
-  timestamp  DateTime @default(now())
-
-  lead Lead @relation(fields: [session_id], references: [id], onDelete: Cascade)
-
-  @@index([session_id, timestamp])
-}
-
+// One row per pipeline run. AI-team observability only — not surfaced
+// to tenants.
 model TurnLog {
   id                       String   @id @default(uuid())
-  session_id               String
+  business_id              String
+  conversation_id          String
+  contact_id               String
+  channel                  String
   ts                       DateTime @default(now())
-  duration_ms              Int
-  input                    Json
+  status                   String
   triage                   Json
   attempts                 Json
-  outcome                  String
-  shipped                  String
-  intent_path              String?
-  language                 String?
+  validator_pass           Boolean  @default(false)
   retry_count              Int      @default(0)
   high_severity_violations Int      @default(0)
+  intent_path              String?
+  language                 String?
+  shipped                  String
+  tokens_in                Int?
+  tokens_out               Int?
+  duration_ms              Int
+  trace_id                 String?
+  model_triage             String?
+  model_generator          String?
+  model_validator          String?
 
-  @@index([ts])
-  @@index([intent_path])
-  @@index([session_id, ts])
+  @@index([business_id, ts])
+  @@index([trace_id])
+  @@index([business_id, conversation_id, ts])
 }
