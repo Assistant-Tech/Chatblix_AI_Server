@@ -4,7 +4,6 @@ import { AppConfigService } from '../config/app-config.service';
 import { TriageService } from './triage.service';
 import { GeneratorService } from './generator.service';
 import { ValidatorService } from './validator.service';
-import { CorpusService } from './corpus.service';
 import { MetricsService } from './metrics.service';
 import { severityScore, verdictPasses } from '../common/utils/pipeline/severity';
 import { parsePartialAgentOutput } from '../common/utils/parser';
@@ -27,7 +26,6 @@ export class PipelineOrchestratorService {
     private readonly triage: TriageService,
     private readonly generator: GeneratorService,
     private readonly validator: ValidatorService,
-    private readonly corpus: CorpusService,
     private readonly metrics: MetricsService,
   ) {}
 
@@ -239,22 +237,10 @@ export class PipelineOrchestratorService {
       },
     };
 
-    // Fire-and-forget corpus log
-    this.corpus
-      .logTurn({
-        turn_id: turnId,
-        session_id: sessionId,
-        ts: new Date(tStart).toISOString(),
-        duration_ms: Date.now() - tStart,
-        input: { message, history, customer_context: customerContext },
-        triage,
-        attempts,
-        outcome,
-        shipped,
-      })
-      .catch((e) => {
-        this.logger.error(`corpus log failed: ${(e as Error)?.message || e}`);
-      });
+    // TurnLog write moved out: Phase 4.8 rebuilds this against the new
+    // TurnLog schema (business_id / conversation_id / token fields).
+    void turnId;
+    void tStart;
 
     const done: DoneInternalData = {
       turn_id: turnId,

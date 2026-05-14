@@ -5,7 +5,6 @@ import { MetricsService } from './metrics.service';
 import { TriageService } from './triage.service';
 import { GeneratorService } from './generator.service';
 import { ValidatorService } from './validator.service';
-import { CorpusService } from './corpus.service';
 import { PipelineOrchestratorService } from './orchestrator.service';
 
 @Module({
@@ -16,7 +15,6 @@ import { PipelineOrchestratorService } from './orchestrator.service';
     TriageService,
     GeneratorService,
     ValidatorService,
-    CorpusService,
     PipelineOrchestratorService,
   ],
   exports: [
@@ -26,7 +24,6 @@ import { PipelineOrchestratorService } from './orchestrator.service';
     TriageService,
     GeneratorService,
     ValidatorService,
-    CorpusService,
     PipelineOrchestratorService,
   ],
 })

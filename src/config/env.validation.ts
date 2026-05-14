@@ -75,10 +75,6 @@ export class EnvSchema {
   @IsInt()
   @Min(0)
   PIPELINE_MAX_RETRIES: number = 1;
-
-  @IsOptional()
-  @IsBoolean()
-  PIPELINE_LOG_CORPUS: boolean = true;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvSchema {

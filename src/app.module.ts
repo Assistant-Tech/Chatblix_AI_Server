@@ -4,9 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CacheModule } from './cache/cache.module';
 import { AuthModule } from './auth/auth.module';
 import { BusinessModule } from './business/business.module';
-import { HistoryModule } from './history/history.module';
 import { PipelineModule } from './pipeline/pipeline.module';
-import { ChatModule } from './chat/chat.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -16,9 +14,7 @@ import { HealthModule } from './health/health.module';
     CacheModule,
     AuthModule,
     BusinessModule,
-    HistoryModule,
     PipelineModule,
-    ChatModule,
     HealthModule,
   ],
 })

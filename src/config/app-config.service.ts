@@ -69,8 +69,4 @@ export class AppConfigService {
   maxRetries(): number {
     return this.config.get('PIPELINE_MAX_RETRIES', { infer: true });
   }
-
-  shouldLogCorpus(): boolean {
-    return this.config.get('PIPELINE_LOG_CORPUS', { infer: true });
-  }
 }
