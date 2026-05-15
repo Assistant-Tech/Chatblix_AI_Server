@@ -183,7 +183,7 @@ but annotated by purpose.
     ],
     "policies": {
       "return_policy":   "24-hour window for perishables.",
-      "delivery_info":   "Same-day in Kathmandu valley.",
+      "delivery_policy": "Same-day in Kathmandu valley.",
       "payment_methods": ["eSewa", "Khalti", "COD"],
       "custom": [
         { "label": "Loyalty program", "content": "..." }
@@ -330,7 +330,7 @@ compile(p: BusinessProfile): string {
     '',
     'POLICIES',
     `Returns: ${p.kb.policies.return_policy}`,
-    `Delivery: ${p.kb.policies.delivery_info}`,
+    `Delivery: ${p.kb.policies.delivery_policy}`,
     `Payment: ${p.kb.policies.payment_methods.join(', ')}`,
     ...p.kb.policies.custom.map(c => `${c.label}: ${c.content}`),
     '',
@@ -546,7 +546,7 @@ Today the repo has `src/pipeline/kb/fresh-and-more.json` and
    | `channels` | dropped (main backend owns channels) |
    | `product_catalog` | `kb.catalog` |
    | `current_offers` | `kb.extras.offers` |
-   | `delivery_policy` | `kb.policies.delivery_info` |
+   | `delivery_policy` | `kb.policies.delivery_policy` |
    | `return_and_exchange_policy` | `kb.policies.return_policy` |
    | `payment_methods` | `kb.policies.payment_methods` |
    | `cod_policy` | `kb.policies.custom[]` |

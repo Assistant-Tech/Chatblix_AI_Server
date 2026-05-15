@@ -227,6 +227,7 @@ no auth flows. Five endpoints.
 {
   "name": "Fresh & More",
   "description": "We sell organic groceries in Kathmandu.",
+  "business_type": "skincare",               // optional; "skincare" | "clothing" | "food" | "salon" | "electronics" | "service" | free-form. Drives a domain-adaptation block in the compiled prompt.
   "language": "en",                          // primary language code
   "tone": {
     "style": "friendly",                     // "formal" | "friendly" | "casual"
@@ -247,14 +248,25 @@ no auth flows. Five endpoints.
   ],
   "policies": {
     "return_policy":   "24-hour window for perishables.",
-    "delivery_info":   "Same-day in Kathmandu valley.",
+    "delivery_policy": "Same-day in Kathmandu valley.",
     "payment_methods": ["eSewa", "Khalti", "COD"],
     "custom": []
   },
   "escalation": {
     "triggers": ["refund", "speak to human", "manager"],
     "handoff_message": "Let me connect you to a teammate."
-  }
+  },
+  // Optional. Prices are NPR by convention (Nepal/Kathmandu target market).
+  "product_catalog": [
+    { "name": "Neem Soap", "price": 499, "description": "Anti-acne bar", "tags": ["face", "bestseller"] }
+  ],
+  "locations": [
+    { "name": "Newroad", "address": "Bishal Bazaar ko samu" }
+  ],
+  "current_offers": [
+    { "title": "Bundle deal", "details": "Buy 2, get 10% off", "valid_until": "2026-08-31" }
+  ],
+  "high_value_threshold": 5000
 }
 ```
 
