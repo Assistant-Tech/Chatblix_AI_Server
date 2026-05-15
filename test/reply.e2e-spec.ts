@@ -10,6 +10,7 @@ import { AppConfigService } from '../src/config/app-config.service';
 const PROFILE_24_7 = {
   name: 'Fresh & More',
   description: 'Organic groceries in Kathmandu.',
+  business_type: 'skincare',
   language: 'en',
   tone: {
     style: 'friendly' as const,

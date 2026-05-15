@@ -188,6 +188,15 @@ export class BusinessProfileDto {
   @MaxLength(2000)
   description!: string;
 
+  // Free-form domain hint used by the compiler to inject a short
+  // domain-adaptation cue into the per-tenant system prompt. Not enum'd on
+  // purpose — the taxonomy isn't stable yet. Common values today:
+  // "skincare", "clothing", "food", "salon", "electronics", "service".
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  business_type?: string;
+
   @IsString()
   @MaxLength(16)
   language!: string;

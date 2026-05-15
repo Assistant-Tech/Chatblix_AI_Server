@@ -19,6 +19,7 @@ export class SystemPromptCompilerService {
   compile(profile: BusinessProfileDto): string {
     const sections: string[] = [
       renderIdentity(profile),
+      renderBusinessType(profile),
       renderPersona(profile),
       renderLanguage(profile),
       renderHours(profile),
@@ -35,6 +36,63 @@ export class SystemPromptCompilerService {
 
 function renderIdentity(profile: BusinessProfileDto): string {
   return [`# ${profile.name}`, '', profile.description].join('\n');
+}
+
+// Worked examples in the common stage prompts are skincare-shop content. This
+// block tells the LLM the actual domain of THIS tenant and how to re-skin the
+// example patterns. Without it, a clothing/food/salon tenant would inherit
+// skincare framing (e.g. "2-3 hapta ma farak dekhincha" — meaningless for a
+// shirt) when the model pattern-matches from those examples.
+const DOMAIN_ADAPTATION_BY_TYPE: Record<string, string[]> = {
+  skincare: [
+    'Outcome cues reference visible skin improvement: "2-3 hapta ma farak dekhincha", "daily lagaunu hola".',
+    'Concerns frame as skin issues (pimple, daag, dryness, oiliness). Mechanism/ingredient talk stays OUT unless asked.',
+  ],
+  clothing: [
+    'Outcome cues reference fit, feel, durability, color: "fit ramro huncha", "wash garda color kayam rahancha", "fabric soft cha hajur".',
+    'Concerns frame as size/fit/fabric/occasion. Replace skincare timeframes ("2-3 hapta") with apparel-relevant cues ("regular wash ma kayam rahancha", "festive ko lagi perfect").',
+    'When in doubt about size, ask for measurements or recommend exchange policy — never guess.',
+  ],
+  food: [
+    'Outcome cues reference freshness, taste, prep time, hygiene: "fresh banaeko cha", "30 min ma puguncha", "spice level adjust garna sakcha".',
+    'Concerns frame as timing/freshness/dietary (veg, jain, allergy). Replace skincare timeframes with delivery ETAs.',
+    'On allergy/medical-diet mention, route to handoff — never claim safety.',
+  ],
+  salon: [
+    'Outcome cues reference service duration, booking, skill: "30-45 min lagcha", "booking chahincha", "experienced stylist le garcha".',
+    'Concerns frame as appointment timing, service fit, prior-treatment compatibility. Replace product-recommendation patterns with service-recommendation patterns.',
+    'Walk-in vs appointment status must come from BUSINESS_CONTEXT — never invent slots.',
+  ],
+  electronics: [
+    'Outcome cues reference warranty, specs, brand, after-sales: "1 year warranty cha", "spare parts milcha", "brand authorized dealer hami".',
+    'Concerns frame as compatibility/warranty/reliability. Avoid skincare-style "regular use le farak aaucha" framing — electronics are pass/fail products.',
+    'Never quote specs not in BUSINESS_CONTEXT.product_catalog.',
+  ],
+  service: [
+    'Outcome cues reference turnaround, expertise, scope of work: "2-3 din ma complete huncha", "experienced team", "site visit chahincha bhane bhanidinu".',
+    'Concerns frame as scope, timeline, credentials. Replace product-pitch patterns with service-quote patterns.',
+    'Pricing for custom services usually needs a quote — route to handoff if asked for a flat number.',
+  ],
+};
+
+function renderBusinessType(profile: BusinessProfileDto): string {
+  const type = profile.business_type?.trim();
+  if (!type) return '';
+
+  const lines: string[] = ['## BUSINESS TYPE & DOMAIN ADAPTATION', `Type: ${type}`, ''];
+
+  const adaptation = DOMAIN_ADAPTATION_BY_TYPE[type.toLowerCase()];
+  if (adaptation) {
+    lines.push('Adapt the example patterns in the stage instructions to this domain:');
+    for (const line of adaptation) {
+      lines.push(`- ${line}`);
+    }
+  } else {
+    lines.push(
+      `Adapt outcome cues, pacing, and product framing to a ${type} business. The worked examples in the stage instructions use a skincare shop's products and timeframes; do not reuse skincare-specific framing (e.g. "2-3 hapta ma farak dekhincha") unless it genuinely fits ${type}. Quote ONLY from BUSINESS_CONTEXT for catalog, prices, and policies.`,
+    );
+  }
+  return lines.join('\n');
 }
 
 function renderPersona(profile: BusinessProfileDto): string {

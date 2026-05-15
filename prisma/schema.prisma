@@ -13,6 +13,9 @@ model BusinessProfile {
   id                    String   @id
   name                  String
   description           String
+  // Free-form domain hint used by the prompt compiler. Not enum'd — taxonomy
+  // is intentionally open while we still learn what shapes of business onboard.
+  business_type         String?
   language              String   @default("en")
   tone                  Json
   hours                 Json

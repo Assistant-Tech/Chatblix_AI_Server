@@ -89,6 +89,7 @@ type ProfileWriteFields = Pick<
   Prisma.BusinessProfileUncheckedCreateInput,
   | 'name'
   | 'description'
+  | 'business_type'
   | 'language'
   | 'tone'
   | 'hours'
@@ -105,6 +106,7 @@ function toPrismaInput(dto: BusinessProfileDto): ProfileWriteFields {
   return {
     name: dto.name,
     description: dto.description,
+    business_type: dto.business_type ?? null,
     language: dto.language,
     tone: dto.tone as unknown as Prisma.InputJsonValue,
     hours: dto.hours as unknown as Prisma.InputJsonValue,
@@ -131,6 +133,7 @@ function asDto(row: BusinessProfile): BusinessProfileDto {
   return {
     name: row.name,
     description: row.description,
+    business_type: row.business_type ?? undefined,
     language: row.language,
     tone: row.tone as unknown as BusinessProfileDto['tone'],
     hours: row.hours as unknown as BusinessProfileDto['hours'],

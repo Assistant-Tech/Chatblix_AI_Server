@@ -48,6 +48,7 @@ function rowToDto(row: BusinessProfile): BusinessProfileDto {
   return {
     name: row.name,
     description: row.description,
+    business_type: row.business_type ?? undefined,
     language: row.language,
     tone: row.tone as unknown as BusinessProfileDto['tone'],
     hours: row.hours as unknown as BusinessProfileDto['hours'],
