@@ -1,13 +1,20 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: false });
   app.setGlobalPrefix('ai/v1');
+
+  // Cap inbound JSON body size so oversized history payloads can't blow the
+  // request budget. Default 256 KiB, override via MAX_REQUEST_BYTES.
+  const config = app.get(AppConfigService);
+  app.useBodyParser('json', { limit: config.maxRequestBytes() });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -41,7 +48,6 @@ async function bootstrap(): Promise<void> {
     swaggerOptions: { persistAuthorization: true, displayRequestDuration: true },
   });
 
-  const config = app.get(AppConfigService);
   const port = config.port();
 
   await app.listen(port);
