@@ -27,7 +27,7 @@ const PROFILE_24_7 = {
   faqs: [{ question: 'Deliver to Bhaktapur?', answer: 'Yes, same-day before 2 PM.' }],
   policies: {
     return_policy: '24h for perishables.',
-    delivery_info: 'Same-day in Kathmandu valley.',
+    delivery_policy: 'Same-day in Kathmandu valley.',
     payment_methods: ['eSewa', 'Khalti', 'COD'],
   },
   escalation: {

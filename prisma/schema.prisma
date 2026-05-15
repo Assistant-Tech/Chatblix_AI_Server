@@ -10,19 +10,25 @@ datasource db {
 // via PUT /ai/v1/businesses/{id}. Main backend is the source of truth;
 // this is a synced replica that exists only to feed the prompt compiler.
 model BusinessProfile {
-  id          String   @id
-  name        String
-  description String
-  language    String   @default("en")
-  tone        Json
-  hours       Json
-  faqs        Json
-  policies    Json
-  escalation  Json
-  version     Int      @default(1)
-  active      Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id                    String   @id
+  name                  String
+  description           String
+  language              String   @default("en")
+  tone                  Json
+  hours                 Json
+  faqs                  Json
+  policies              Json
+  escalation            Json
+  // Optional commercial surface. Prices/thresholds are NPR by convention for
+  // the Nepal/Kathmandu target market.
+  product_catalog       Json?
+  locations             Json?
+  current_offers        Json?
+  high_value_threshold  Int?
+  version               Int      @default(1)
+  active                Boolean  @default(true)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 }
 
 // One row per pipeline run. AI-team observability only — not surfaced

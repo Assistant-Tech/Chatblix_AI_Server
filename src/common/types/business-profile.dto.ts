@@ -4,10 +4,13 @@ import {
   ArrayUnique,
   IsArray,
   IsIn,
+  IsISO8601,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
+  Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -93,7 +96,7 @@ export class PoliciesDto {
 
   @IsString()
   @MaxLength(2000)
-  delivery_info!: string;
+  delivery_policy!: string;
 
   @IsArray()
   @ArrayMaxSize(20)
@@ -117,6 +120,62 @@ export class EscalationDto {
   @IsString()
   @MaxLength(500)
   handoff_message!: string;
+}
+
+export class ProductDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  name!: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  tags?: string[];
+}
+
+export class LocationDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  hours?: string;
+}
+
+export class OfferDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  details!: string;
+
+  @IsOptional()
+  @IsISO8601()
+  valid_until?: string;
 }
 
 export class BusinessProfileDto {
@@ -154,4 +213,33 @@ export class BusinessProfileDto {
   @ValidateNested()
   @Type(() => EscalationDto)
   escalation!: EscalationDto;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ProductDto)
+  product_catalog?: ProductDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => LocationDto)
+  locations?: LocationDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => OfferDto)
+  current_offers?: OfferDto[];
+
+  // NPR threshold above which the pipeline should treat a deal as high-value
+  // (used by the triage prompt to gate escalation / model upgrades). Numeric
+  // currency is NPR by convention for the Nepal/Kathmandu target market.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  high_value_threshold?: number;
 }

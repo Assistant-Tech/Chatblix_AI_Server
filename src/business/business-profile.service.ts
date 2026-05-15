@@ -87,7 +87,18 @@ export class BusinessProfileService {
 
 type ProfileWriteFields = Pick<
   Prisma.BusinessProfileUncheckedCreateInput,
-  'name' | 'description' | 'language' | 'tone' | 'hours' | 'faqs' | 'policies' | 'escalation'
+  | 'name'
+  | 'description'
+  | 'language'
+  | 'tone'
+  | 'hours'
+  | 'faqs'
+  | 'policies'
+  | 'escalation'
+  | 'product_catalog'
+  | 'locations'
+  | 'current_offers'
+  | 'high_value_threshold'
 >;
 
 function toPrismaInput(dto: BusinessProfileDto): ProfileWriteFields {
@@ -100,6 +111,19 @@ function toPrismaInput(dto: BusinessProfileDto): ProfileWriteFields {
     faqs: dto.faqs as unknown as Prisma.InputJsonValue,
     policies: dto.policies as unknown as Prisma.InputJsonValue,
     escalation: dto.escalation as unknown as Prisma.InputJsonValue,
+    product_catalog:
+      dto.product_catalog === undefined
+        ? Prisma.DbNull
+        : (dto.product_catalog as unknown as Prisma.InputJsonValue),
+    locations:
+      dto.locations === undefined
+        ? Prisma.DbNull
+        : (dto.locations as unknown as Prisma.InputJsonValue),
+    current_offers:
+      dto.current_offers === undefined
+        ? Prisma.DbNull
+        : (dto.current_offers as unknown as Prisma.InputJsonValue),
+    high_value_threshold: dto.high_value_threshold ?? null,
   };
 }
 
@@ -113,5 +137,18 @@ function asDto(row: BusinessProfile): BusinessProfileDto {
     faqs: row.faqs as unknown as BusinessProfileDto['faqs'],
     policies: row.policies as unknown as BusinessProfileDto['policies'],
     escalation: row.escalation as unknown as BusinessProfileDto['escalation'],
+    product_catalog:
+      row.product_catalog === null
+        ? undefined
+        : (row.product_catalog as unknown as BusinessProfileDto['product_catalog']),
+    locations:
+      row.locations === null
+        ? undefined
+        : (row.locations as unknown as BusinessProfileDto['locations']),
+    current_offers:
+      row.current_offers === null
+        ? undefined
+        : (row.current_offers as unknown as BusinessProfileDto['current_offers']),
+    high_value_threshold: row.high_value_threshold ?? undefined,
   };
 }

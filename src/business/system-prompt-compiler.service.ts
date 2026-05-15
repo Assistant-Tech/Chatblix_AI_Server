@@ -22,6 +22,9 @@ export class SystemPromptCompilerService {
       renderPersona(profile),
       renderLanguage(profile),
       renderHours(profile),
+      renderLocations(profile),
+      renderCatalog(profile),
+      renderOffers(profile),
       renderFaqs(profile),
       renderPolicies(profile),
       renderEscalation(profile),
@@ -87,6 +90,44 @@ function compareSchedule(a: ScheduleEntryDto, b: ScheduleEntryDto): number {
   return a.open.localeCompare(b.open);
 }
 
+function renderLocations(profile: BusinessProfileDto): string {
+  const locations = profile.locations ?? [];
+  if (locations.length === 0) return '';
+  const lines: string[] = ['## LOCATIONS'];
+  for (const loc of locations) {
+    const parts: string[] = [`- ${loc.name}`];
+    if (loc.address) parts.push(`(${loc.address})`);
+    if (loc.hours) parts.push(`[${loc.hours}]`);
+    lines.push(parts.join(' '));
+  }
+  return lines.join('\n');
+}
+
+function renderCatalog(profile: BusinessProfileDto): string {
+  const catalog = profile.product_catalog ?? [];
+  if (catalog.length === 0) return '';
+  const lines: string[] = ['## CATALOG (authoritative — quote only from here)'];
+  for (const p of catalog) {
+    const parts: string[] = [`- ${p.name}`];
+    if (typeof p.price === 'number') parts.push(`NPR ${p.price}`);
+    if (p.description) parts.push(`— ${p.description}`);
+    if (p.tags && p.tags.length > 0) parts.push(`[${p.tags.join(', ')}]`);
+    lines.push(parts.join(' '));
+  }
+  return lines.join('\n');
+}
+
+function renderOffers(profile: BusinessProfileDto): string {
+  const offers = profile.current_offers ?? [];
+  if (offers.length === 0) return '';
+  const lines: string[] = ['## CURRENT OFFERS'];
+  for (const o of offers) {
+    const trailing = o.valid_until ? ` (valid until ${o.valid_until})` : '';
+    lines.push(`- ${o.title}: ${o.details}${trailing}`);
+  }
+  return lines.join('\n');
+}
+
 function renderFaqs(profile: BusinessProfileDto): string {
   if (profile.faqs.length === 0) return '';
   const lines: string[] = ['## FAQS (ground truth — do not invent answers)'];
@@ -101,7 +142,7 @@ function renderPolicies(profile: BusinessProfileDto): string {
   const lines: string[] = [
     '## POLICIES',
     `Returns: ${policies.return_policy}`,
-    `Delivery: ${policies.delivery_info}`,
+    `Delivery: ${policies.delivery_policy}`,
     `Payment methods: ${policies.payment_methods.join(', ')}`,
   ];
   if (policies.custom && policies.custom.length > 0) {
@@ -115,9 +156,13 @@ function renderPolicies(profile: BusinessProfileDto): string {
 
 function renderEscalation(profile: BusinessProfileDto): string {
   const { escalation } = profile;
-  return [
+  const lines: string[] = [
     '## ESCALATION',
     `Trigger keywords: ${escalation.triggers.join(', ')}`,
     `Handoff line: ${escalation.handoff_message}`,
-  ].join('\n');
+  ];
+  if (typeof profile.high_value_threshold === 'number') {
+    lines.push(`High-value threshold: NPR ${profile.high_value_threshold}`);
+  }
+  return lines.join('\n');
 }

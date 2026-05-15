@@ -54,6 +54,19 @@ function rowToDto(row: BusinessProfile): BusinessProfileDto {
     faqs: row.faqs as unknown as BusinessProfileDto['faqs'],
     policies: row.policies as unknown as BusinessProfileDto['policies'],
     escalation: row.escalation as unknown as BusinessProfileDto['escalation'],
+    product_catalog:
+      row.product_catalog === null
+        ? undefined
+        : (row.product_catalog as unknown as BusinessProfileDto['product_catalog']),
+    locations:
+      row.locations === null
+        ? undefined
+        : (row.locations as unknown as BusinessProfileDto['locations']),
+    current_offers:
+      row.current_offers === null
+        ? undefined
+        : (row.current_offers as unknown as BusinessProfileDto['current_offers']),
+    high_value_threshold: row.high_value_threshold ?? undefined,
   };
 }
 
