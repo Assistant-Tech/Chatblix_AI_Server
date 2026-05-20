@@ -13,25 +13,14 @@ those belong to the main backend.
 
 | # | Doc | Read it when... |
 |---|---|---|
+| 0 | [PIPELINE_README.md](./PIPELINE_README.md) | You want a visual walkthrough of how the Triage → Generator → Validator pipeline works. **Start here if you're new.** |
 | 1 | [AI_BACKEND_ARCHITECTURE.md](./AI_BACKEND_ARCHITECTURE.md) | You want to understand the service end-to-end. Start here. |
 | 2 | [KB_MANAGEMENT.md](./KB_MANAGEMENT.md) | You're working on profile sync, the system-prompt compiler, or the prompt cache. |
 | 3 | [CONVERSATION_HISTORY.md](./CONVERSATION_HISTORY.md) | You're confused how recent conversation turns reach the LLM (spoiler: in the request body, not from a database). |
 | 4 | [COST_AND_BILLING.md](./COST_AND_BILLING.md) | You're planning capacity, setting SaaS prices, or tracking token spend. |
 
-These three are the **authoritative** design for this service. If anything
+These are the **authoritative** design for this service. If anything
 else contradicts them, these win.
-
----
-
-## Archived
-
-The four docs under [`archive/`](./archive/) describe an earlier scope
-where this service owned channels, operators, and tenant auth — all of
-which actually belong to the **main backend**. See
-[`archive/README.md`](./archive/README.md) for what each archived doc
-covers and which team should reference it.
-
-Do not use anything in `archive/` as a build guide for this service.
 
 ---
 
@@ -61,14 +50,14 @@ That's the whole service.
 
 ```
 src/
-├── auth/         InternalTokenGuard           NEW
-├── business/     BusinessProfile + compiler   NEW
-├── cache/        Redis client + prompt cache  NEW
-├── reply/        POST /ai/v1/reply            NEW
-├── pipeline/     triage/generator/validator   refactored
-├── prisma/       PrismaService                kept
-├── config/       env validation               kept
-└── health/       GET /ai/v1/health            kept
+├── auth/         InternalTokenGuard
+├── business/     BusinessProfile + compiler
+├── cache/        Redis client + prompt cache
+├── reply/        POST /ai/v1/reply
+├── pipeline/     triage/generator/validator
+├── prisma/       PrismaService
+├── config/       env validation
+└── health/       GET /ai/v1/health
 ```
 
 Detail of each module is in `AI_BACKEND_ARCHITECTURE.md §8`.
