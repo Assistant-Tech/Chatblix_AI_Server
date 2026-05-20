@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '../config/app-config.service';
-import { OpenRouterClient, OpenRouterError } from './openrouter.client';
+import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isVerdictShape } from '../common/utils/pipeline/contracts';
@@ -24,7 +24,7 @@ export class ValidatorService {
 
   constructor(
     private readonly config: AppConfigService,
-    private readonly client: OpenRouterClient,
+    private readonly llmClient: LLMClientService,
     private readonly prompts: PromptsService,
     private readonly metrics: MetricsService,
   ) {}
@@ -67,21 +67,24 @@ export class ValidatorService {
 
     let response: { text: string };
     try {
-      response = await this.client.chatJson({
-        model,
-        system,
-        user,
-        temperature: 0.0,
-        maxTokens: 700,
-        stopSequences: ['\n\n\n'],
-        timeoutMs: this.config.validatorTimeoutMs(),
-      });
+      response = await this.llmClient.chatJson(
+        {
+          model,
+          system,
+          user,
+          temperature: 0.0,
+          maxTokens: 700,
+          stopSequences: ['\n\n\n'],
+          timeoutMs: this.config.validatorTimeoutMs(),
+        },
+        { stage: 'validator', business_id: input.ctx.business_id, trace_id: input.ctx.trace_id },
+      );
     } catch (e) {
-      const kind = e instanceof OpenRouterError ? e.kind : null;
-      if (kind === 'timeout') this.metrics.bump('validator_timeout');
+      const err = e as { kind?: string };
+      if (err?.kind === 'timeout') this.metrics.bump('validator_timeout');
       else this.metrics.bump('validator_api_error');
       this.metrics.bump('validator_soft_pass_on_error');
-      return this.softPass(kind || 'api_error');
+      return this.softPass(err?.kind ?? 'api_error');
     }
 
     const parsed = extractJsonObject(response.text);

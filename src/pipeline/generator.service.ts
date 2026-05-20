@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '../config/app-config.service';
-import { OpenRouterClient, OpenRouterError } from './openrouter.client';
+import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import type {
@@ -28,7 +28,7 @@ export class GeneratorService {
 
   constructor(
     private readonly config: AppConfigService,
-    private readonly client: OpenRouterClient,
+    private readonly llmClient: LLMClientService,
     private readonly prompts: PromptsService,
     private readonly metrics: MetricsService,
   ) {}
@@ -60,15 +60,18 @@ export class GeneratorService {
     let chunkCount = 0;
     let totalLen = 0;
     try {
-      for await (const chunk of this.client.chatStream({
-        model,
-        system,
-        user,
-        temperature,
-        maxTokens: 800,
-        stopSequences: ['\n\n\n'],
-        timeoutMs: this.config.generatorTimeoutMs(),
-      })) {
+      for await (const chunk of this.llmClient.chatStream(
+        {
+          model,
+          system,
+          user,
+          temperature,
+          maxTokens: 800,
+          stopSequences: ['\n\n\n'],
+          timeoutMs: this.config.generatorTimeoutMs(),
+        },
+        { stage: 'generator', business_id: ctx.business_id, trace_id: ctx.trace_id },
+      )) {
         chunkCount++;
         totalLen += chunk.length;
         yield chunk;
@@ -79,8 +82,8 @@ export class GeneratorService {
         );
       }
     } catch (e) {
-      const kind = e instanceof OpenRouterError ? e.kind : null;
-      if (kind === 'timeout') this.metrics.bump('generator_timeout');
+      const err = e as { kind?: string };
+      if (err?.kind === 'timeout') this.metrics.bump('generator_timeout');
       else this.metrics.bump('generator_api_error');
       throw e;
     }

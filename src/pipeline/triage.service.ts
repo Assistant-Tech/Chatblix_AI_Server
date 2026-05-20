@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '../config/app-config.service';
-import { OpenRouterClient, OpenRouterError } from './openrouter.client';
+import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isTriageShape } from '../common/utils/pipeline/contracts';
@@ -26,7 +26,7 @@ export class TriageService {
 
   constructor(
     private readonly config: AppConfigService,
-    private readonly client: OpenRouterClient,
+    private readonly llmClient: LLMClientService,
     private readonly prompts: PromptsService,
     private readonly metrics: MetricsService,
   ) {}
@@ -44,16 +44,19 @@ export class TriageService {
     ].join('\n\n');
   }
 
-  private async repairJson(rawText: string, model: string): Promise<unknown> {
+  private async repairJson(rawText: string, model: string, business_id: string): Promise<unknown> {
     try {
-      const repaired = await this.client.chatJson({
-        model,
-        system: 'You repair malformed JSON. Output ONLY valid JSON, no prose, no fences.',
-        user: `The following was supposed to be valid JSON. Return ONLY corrected JSON, nothing else:\n\n${rawText}`,
-        temperature: 0.0,
-        maxTokens: 700,
-        timeoutMs: this.config.triageTimeoutMs(),
-      });
+      const repaired = await this.llmClient.chatJson(
+        {
+          model,
+          system: 'You repair malformed JSON. Output ONLY valid JSON, no prose, no fences.',
+          user: `The following was supposed to be valid JSON. Return ONLY corrected JSON, nothing else:\n\n${rawText}`,
+          temperature: 0.0,
+          maxTokens: 700,
+          timeoutMs: this.config.triageTimeoutMs(),
+        },
+        { stage: 'triage', business_id },
+      );
       return extractJsonObject(repaired.text);
     } catch {
       return null;
@@ -80,22 +83,25 @@ export class TriageService {
 
     let response: { text: string };
     try {
-      response = await this.client.chatJson({
-        model,
-        system,
-        user,
-        temperature: 0.1,
-        maxTokens: 700,
-        stopSequences: ['\n\n\n'],
-        timeoutMs: this.config.triageTimeoutMs(),
-      });
+      response = await this.llmClient.chatJson(
+        {
+          model,
+          system,
+          user,
+          temperature: 0.1,
+          maxTokens: 700,
+          stopSequences: ['\n\n\n'],
+          timeoutMs: this.config.triageTimeoutMs(),
+        },
+        { stage: 'triage', business_id: ctx.business_id, trace_id: ctx.trace_id },
+      );
     } catch (e) {
       this.metrics.bump('triage_synthesized_fallback');
-      const kind = e instanceof OpenRouterError ? e.kind : 'api_error';
+      const err = e as { kind?: string };
       return synthesizeFallbackTriage({
         priorAssistantLang,
         stalledCountIncoming,
-        reason: kind,
+        reason: err?.kind ?? 'api_error',
       });
     }
 
@@ -103,7 +109,7 @@ export class TriageService {
     if (!parsed) {
       this.metrics.bump('triage_json_parse_error');
       this.metrics.bump('triage_self_correction_used');
-      parsed = await this.repairJson(response.text, model);
+      parsed = await this.repairJson(response.text, model, ctx.business_id);
     }
 
     if (!parsed || !isTriageShape(parsed)) {

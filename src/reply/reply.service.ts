@@ -2,11 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ContextLoaderService } from './context-loader.service';
 import { HoursService } from '../pipeline/hours.service';
 import { PipelineOrchestratorService } from '../pipeline/orchestrator.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../config/app-config.service';
-import { RequestDedupeService } from '../cache/request-dedupe.service';
 import { parseAgentOutput } from '../common/utils/parser';
 import { highCount } from '../common/utils/pipeline/severity';
+import type { AiReplyJobResult, AiTurnLogData } from '../common/types/turn-log.types';
 import type {
   ContextPacket,
   DoneInternalData,
@@ -17,24 +16,10 @@ import type {
 } from '../common/types/pipeline.types';
 import type {
   ReplyRequestDto,
-  ReplyResponse,
   ReplyResponseEscalate,
   ReplyResponseOutsideHours,
   ReplyResponseReplied,
 } from '../common/types/reply.dto';
-
-export interface ReplyTokenChunk {
-  type: 'token';
-  text: string;
-  attempt: number;
-}
-
-export interface ReplyDoneChunk {
-  type: 'done';
-  response: ReplyResponse;
-}
-
-export type ReplyStreamChunk = ReplyTokenChunk | ReplyDoneChunk;
 
 @Injectable()
 export class ReplyService {
@@ -44,24 +29,15 @@ export class ReplyService {
     private readonly contextLoader: ContextLoaderService,
     private readonly hours: HoursService,
     private readonly orchestrator: PipelineOrchestratorService,
-    private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
-    private readonly dedupe: RequestDedupeService,
   ) {}
 
-  /** Non-streaming entry point — `POST /ai/v1/reply`. */
-  async handle(req: ReplyRequestDto): Promise<ReplyResponse> {
+  /**
+   * Main entry point — called by AiReplyWorker for each BullMQ job.
+   * Returns the reply response AND the TurnLog data for main-backend to persist.
+   */
+  async handle(req: ReplyRequestDto): Promise<AiReplyJobResult> {
     const start = Date.now();
-    const requestId = req.options?.request_id;
-
-    // Idempotency dedupe: same request_id within 60s returns the cached payload.
-    if (requestId) {
-      const cached = await this.dedupe.getCached<ReplyResponse>(requestId);
-      if (cached) {
-        this.logger.log(`dedupe.hit request_id=${requestId}`);
-        return cached;
-      }
-    }
 
     const ctx = await this.contextLoader.load({
       business_id: req.business_id,
@@ -72,60 +48,23 @@ export class ReplyService {
     });
 
     if (!this.hours.isWithinHours(ctx.profile)) {
+      const latency_ms = Date.now() - start;
       const response: ReplyResponseOutsideHours = {
         status: 'outside_hours',
         reply: this.hours.holidayMessage(ctx.profile),
         metadata: {
-          latency_ms: Date.now() - start,
+          latency_ms,
           trace_id: req.options?.trace_id,
         },
       };
-      await this.logOutsideHours(req, ctx, response);
-      if (requestId) await this.dedupe.storeOnce(requestId, response);
-      return response;
+      return {
+        response,
+        turnLog: buildOutsideHoursTurnLog(response, latency_ms, req.options?.trace_id),
+      };
     }
 
     const collected = await this.runPipeline(req, ctx);
-    const response = await this.buildResponse(req, ctx, collected, start);
-    if (requestId) await this.dedupe.storeOnce(requestId, response);
-    return response;
-  }
-
-  /** Streaming entry point — `POST /ai/v1/reply/stream`. Yields token chunks then a done chunk. */
-  async *stream(req: ReplyRequestDto): AsyncGenerator<ReplyStreamChunk> {
-    const start = Date.now();
-    const ctx = await this.contextLoader.load({
-      business_id: req.business_id,
-      history: req.history,
-      contact_id: req.contact_id,
-      channel: req.channel,
-      trace_id: req.options?.trace_id,
-    });
-
-    if (!this.hours.isWithinHours(ctx.profile)) {
-      const response: ReplyResponseOutsideHours = {
-        status: 'outside_hours',
-        reply: this.hours.holidayMessage(ctx.profile),
-        metadata: { latency_ms: Date.now() - start, trace_id: req.options?.trace_id },
-      };
-      await this.logOutsideHours(req, ctx, response);
-      yield { type: 'done', response };
-      return;
-    }
-
-    const collected: CollectedTurn = { tokens: [] };
-    for await (const ev of this.orchestrator.streamTurn(this.buildOrchestratorInput(req, ctx))) {
-      this.absorbEvent(ev, collected);
-      if (ev.event === 'token') {
-        const data = ev.data as { content?: string; attempt?: number };
-        if (data?.content) {
-          yield { type: 'token', text: data.content, attempt: data.attempt ?? 0 };
-        }
-      }
-    }
-
-    const response = await this.buildResponse(req, ctx, collected, start);
-    yield { type: 'done', response };
+    return this.buildResult(req, ctx, collected, start);
   }
 
   // ───────── internals ─────────
@@ -142,38 +81,19 @@ export class ReplyService {
   }
 
   private async runPipeline(req: ReplyRequestDto, ctx: ContextPacket): Promise<CollectedTurn> {
-    const collected: CollectedTurn = { tokens: [] };
+    const collected: CollectedTurn = {};
     for await (const ev of this.orchestrator.streamTurn(this.buildOrchestratorInput(req, ctx))) {
-      this.absorbEvent(ev, collected);
+      absorbEvent(ev, collected);
     }
     return collected;
   }
 
-  private absorbEvent(ev: PipelineEvent, c: CollectedTurn): void {
-    switch (ev.event) {
-      case 'triage':
-        c.triage = ev.data as Triage;
-        break;
-      case 'escalate':
-        c.escalation = ev.data as { reason?: string; matched_trigger?: string };
-        break;
-      case '_done_internal':
-        c.done = ev.data as DoneInternalData;
-        break;
-      case 'token':
-        c.tokens.push((ev.data as { content?: string })?.content ?? '');
-        break;
-      default:
-        break;
-    }
-  }
-
-  private async buildResponse(
+  private buildResult(
     req: ReplyRequestDto,
     ctx: ContextPacket,
     c: CollectedTurn,
     start: number,
-  ): Promise<ReplyResponse> {
+  ): AiReplyJobResult {
     const done = c.done;
     const triage = c.triage ?? done?.triage;
     const shipped = done?.shipped ?? '';
@@ -191,6 +111,25 @@ export class ReplyService {
     const lastAttempt = done?.attempts?.[done.attempts.length - 1];
     const validatorPass = lastAttempt?.verdict?.pass === true;
     const lastViolations = lastAttempt?.verdict?.violations?.map((v) => v.rule_name) ?? [];
+    const violations = lastAttempt?.verdict?.violations ?? [];
+
+    const baseTurnLog: Omit<AiTurnLogData, 'status'> = {
+      triage: (triage ?? {}) as object,
+      attempts: (done?.attempts ?? []) as unknown as object,
+      validatorPass,
+      retryCount: Math.max(0, (done?.attempts?.length ?? 1) - 1),
+      highSeverityViolations: highCount(violations),
+      intentPath: triage?.intent_path ?? null,
+      language: triage?.language?.detected ?? null,
+      shipped: done?.shipped ?? '',
+      tokensIn: null,
+      tokensOut: null,
+      durationMs: latency_ms,
+      traceId: req.options?.trace_id ?? null,
+      modelTriage: this.config.triageModel(),
+      modelGenerator: this.config.generatorModel(),
+      modelValidator: this.config.validatorModel(),
+    };
 
     if (done?.outcome === 'escalate' || c.escalation) {
       const reasonRaw = c.escalation?.reason ?? done?.escalated?.reason ?? 'unknown';
@@ -209,11 +148,9 @@ export class ReplyService {
           trace_id: req.options?.trace_id,
         },
       };
-      await this.logTurn(req, ctx, c, response, latency_ms);
-      return response;
+      return { response, turnLog: { ...baseTurnLog, status: 'escalate' } };
     }
 
-    // Validator-exhausted: orchestrator shipped a least-bad candidate but flagged ship_with_violations.
     if (done?.outcome === 'ship_with_violations' && !validatorPass) {
       const handoff = ctx.profile.escalation?.handoff_message ?? parsed.reply ?? '';
       const response: ReplyResponseEscalate = {
@@ -229,8 +166,7 @@ export class ReplyService {
           trace_id: req.options?.trace_id,
         },
       };
-      await this.logTurn(req, ctx, c, response, latency_ms);
-      return response;
+      return { response, turnLog: { ...baseTurnLog, status: 'escalate' } };
     }
 
     const response: ReplyResponseReplied = {
@@ -245,97 +181,65 @@ export class ReplyService {
         trace_id: req.options?.trace_id,
       },
     };
-    await this.logTurn(req, ctx, c, response, latency_ms);
-    return response;
-  }
-
-  private async logTurn(
-    req: ReplyRequestDto,
-    ctx: ContextPacket,
-    c: CollectedTurn,
-    response: ReplyResponse,
-    latency_ms: number,
-  ): Promise<void> {
-    try {
-      const done = c.done;
-      const triage = c.triage ?? done?.triage ?? null;
-      const lastAttempt = done?.attempts?.[done.attempts.length - 1];
-      const violations = lastAttempt?.verdict?.violations ?? [];
-
-      await this.prisma.turnLog.create({
-        data: {
-          business_id: req.business_id,
-          conversation_id: req.conversation_id,
-          contact_id: req.contact_id,
-          channel: req.channel,
-          status: response.status,
-          triage: (triage ?? {}) as object,
-          attempts: (done?.attempts ?? []) as unknown as object,
-          validator_pass: lastAttempt?.verdict?.pass === true,
-          retry_count: Math.max(0, (done?.attempts?.length ?? 1) - 1),
-          high_severity_violations: highCount(violations),
-          intent_path: triage?.intent_path ?? null,
-          language: triage?.language?.detected ?? null,
-          shipped: done?.shipped ?? '',
-          duration_ms: latency_ms,
-          trace_id: req.options?.trace_id ?? null,
-          model_triage: this.config.triageModel(),
-          model_generator: this.config.generatorModel(),
-          model_validator: this.config.validatorModel(),
-        },
-      });
-    } catch (e) {
-      this.logger.error(`TurnLog write failed: ${(e as Error).message}`);
-    }
-    void ctx;
-  }
-
-  private async logOutsideHours(
-    req: ReplyRequestDto,
-    ctx: ContextPacket,
-    response: ReplyResponseOutsideHours,
-  ): Promise<void> {
-    try {
-      await this.prisma.turnLog.create({
-        data: {
-          business_id: req.business_id,
-          conversation_id: req.conversation_id,
-          contact_id: req.contact_id,
-          channel: req.channel,
-          status: 'outside_hours',
-          triage: {} as object,
-          attempts: [] as unknown as object,
-          validator_pass: false,
-          retry_count: 0,
-          high_severity_violations: 0,
-          intent_path: null,
-          language: null,
-          shipped: response.reply,
-          duration_ms: response.metadata.latency_ms,
-          trace_id: req.options?.trace_id ?? null,
-        },
-      });
-    } catch (e) {
-      this.logger.error(`TurnLog (outside_hours) write failed: ${(e as Error).message}`);
-    }
-    void ctx;
+    return { response, turnLog: { ...baseTurnLog, status: 'replied' } };
   }
 }
+
+// ───────── module-level helpers ─────────
 
 interface CollectedTurn {
   triage?: Triage;
   done?: DoneInternalData;
   escalation?: { reason?: string; matched_trigger?: string };
-  tokens: string[];
+}
+
+function absorbEvent(ev: PipelineEvent, c: CollectedTurn): void {
+  switch (ev.event) {
+    case 'triage':
+      c.triage = ev.data as Triage;
+      break;
+    case 'escalate':
+      c.escalation = ev.data as { reason?: string; matched_trigger?: string };
+      break;
+    case '_done_internal':
+      c.done = ev.data as DoneInternalData;
+      break;
+    default:
+      break;
+  }
+}
+
+function buildOutsideHoursTurnLog(
+  response: ReplyResponseOutsideHours,
+  latency_ms: number,
+  traceId?: string,
+): AiTurnLogData {
+  return {
+    status: 'outside_hours',
+    triage: {},
+    attempts: [],
+    validatorPass: false,
+    retryCount: 0,
+    highSeverityViolations: 0,
+    intentPath: null,
+    language: null,
+    shipped: response.reply,
+    tokensIn: null,
+    tokensOut: null,
+    durationMs: latency_ms,
+    traceId: traceId ?? null,
+    modelTriage: null,
+    modelGenerator: null,
+    modelValidator: null,
+  };
 }
 
 function inferPriorAssistantLang(history: IncomingHistoryMessage[]): LanguageCode | null {
   for (let i = history.length - 1; i >= 0; i--) {
     const t = history[i];
     if (t.role !== 'assistant') continue;
-    const md = t.metadata;
-    const lang = md?.['suggested_reply_language'];
-    if (lang === 'en' || lang === 'romanized_ne' || lang === 'mixed') return lang;
+    const lang = t.metadata?.['suggested_reply_language'];
+    if (lang === 'en' || lang === 'romanized_ne' || lang === 'mixed') return lang as LanguageCode;
   }
   return null;
 }

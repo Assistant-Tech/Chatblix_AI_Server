@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { OpenRouterClient } from './openrouter.client';
 import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
-import { PromptAssemblerService } from './prompt-assembler.service';
 import { ResponseCleanerService } from './response-cleaner.service';
 import { MetricsService } from './metrics.service';
 import { TriageService } from './triage.service';
@@ -18,7 +17,6 @@ const sharedProviders = [
   OpenRouterClient,
   LLMClientService,
   PromptsService,
-  PromptAssemblerService,
   ResponseCleanerService,
   MetricsService,
   TriageService,

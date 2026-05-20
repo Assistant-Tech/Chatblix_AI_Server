@@ -15,11 +15,21 @@ export class EnvSchema {
   @Min(1)
   PORT: number = 8000;
 
-  @IsString()
-  DATABASE_URL!: string;
-
+  // ai-backend's own Redis — prompt cache, profile cache, request dedupe
   @IsString()
   REDIS_URL!: string;
+
+  // Shared Redis with main-backend — BullMQ job queue only
+  @IsString()
+  BULLMQ_REDIS_URL!: string;
+
+  // main-backend internal API — cold cache profile fetch on Redis miss
+  @IsString()
+  MAIN_BACKEND_INTERNAL_URL!: string;
+
+  @IsString()
+  @MinLength(32)
+  MAIN_BACKEND_INTERNAL_TOKEN!: string;
 
   @IsString()
   @MinLength(32)
@@ -76,11 +86,6 @@ export class EnvSchema {
   @IsInt()
   @Min(1)
   MAX_HISTORY_TURNS: number = 10;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1024)
-  MAX_REQUEST_BYTES: number = 262144;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvSchema {

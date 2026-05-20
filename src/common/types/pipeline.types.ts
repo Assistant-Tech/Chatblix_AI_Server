@@ -75,8 +75,7 @@ export interface HistoryMessage {
   timestamp?: Date;
 }
 
-// Wire-shape history message — as it arrives in a ReplyRequest body.
-// timestamp is an ISO string; ContextLoader is responsible for any conversion.
+// Wire-shape history message — as it arrives in the job payload.
 export interface IncomingHistoryMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -85,12 +84,11 @@ export interface IncomingHistoryMessage {
 }
 
 // The single bag of data every pipeline stage receives.
-// No service inside the pipeline should re-read DB / files / caches —
+// No service inside the pipeline should re-read DB / caches —
 // ContextLoader is the only place that hydrates this.
 export interface ContextPacket {
   business_id: string;
   profile: import('./business-profile.dto').BusinessProfileDto;
-  systemPrompt: string;
   history: IncomingHistoryMessage[];
   contact_id: string;
   channel: string;

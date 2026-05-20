@@ -10,12 +10,22 @@ export class AppConfigService {
     return this.config.get('PORT', { infer: true });
   }
 
-  databaseUrl(): string {
-    return this.config.get('DATABASE_URL', { infer: true });
-  }
-
+  // ai-backend's own Redis (prompt cache, profile cache, dedupe)
   redisUrl(): string {
     return this.config.get('REDIS_URL', { infer: true });
+  }
+
+  // Shared Redis with main-backend (BullMQ job queue)
+  bullmqRedisUrl(): string {
+    return this.config.get('BULLMQ_REDIS_URL', { infer: true });
+  }
+
+  mainBackendInternalUrl(): string {
+    return this.config.get('MAIN_BACKEND_INTERNAL_URL', { infer: true });
+  }
+
+  mainBackendInternalToken(): string {
+    return this.config.get('MAIN_BACKEND_INTERNAL_TOKEN', { infer: true });
   }
 
   internalToken(): string {
@@ -68,9 +78,5 @@ export class AppConfigService {
 
   maxHistoryTurns(): number {
     return this.config.get('MAX_HISTORY_TURNS', { infer: true });
-  }
-
-  maxRequestBytes(): number {
-    return this.config.get('MAX_REQUEST_BYTES', { infer: true });
   }
 }
