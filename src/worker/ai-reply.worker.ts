@@ -5,7 +5,7 @@ import { ReplyService } from '../reply/reply.service';
 import type { ReplyRequestDto } from '../common/types/reply.dto';
 import type { AiReplyJobResult } from '../common/types/turn-log.types';
 
-@Processor('ai:reply', {
+@Processor('ai.reply', {
   concurrency: 5,
   stalledInterval: 30_000,
   maxStalledCount: 2,
