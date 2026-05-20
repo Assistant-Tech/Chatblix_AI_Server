@@ -14,34 +14,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
-  ai-backend:
-    build: .
-    container_name: ai-backend
-    ports:
-      - '8000:8000'
-    environment:
-      PORT: 8000
-      REDIS_URL: redis://redis:6379
-      BULLMQ_REDIS_URL: ${BULLMQ_REDIS_URL}
-      MAIN_BACKEND_INTERNAL_URL: ${MAIN_BACKEND_INTERNAL_URL}
-      MAIN_BACKEND_INTERNAL_TOKEN: ${MAIN_BACKEND_INTERNAL_TOKEN}
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      USE_MULTI_MODEL_PIPELINE: ${USE_MULTI_MODEL_PIPELINE:-true}
-      PIPELINE_TRIAGE_MODEL: ${PIPELINE_TRIAGE_MODEL:-anthropic/claude-haiku-4.5}
-      PIPELINE_GENERATOR_MODEL: ${PIPELINE_GENERATOR_MODEL:-anthropic/claude-sonnet-4-6}
-      PIPELINE_GENERATOR_MODEL_HIGH_VALUE: ${PIPELINE_GENERATOR_MODEL_HIGH_VALUE:-anthropic/claude-opus-4-7}
-      PIPELINE_VALIDATOR_MODEL: ${PIPELINE_VALIDATOR_MODEL:-anthropic/claude-haiku-4.5}
-      PIPELINE_TRIAGE_TIMEOUT_MS: ${PIPELINE_TRIAGE_TIMEOUT_MS:-4500}
-      PIPELINE_GENERATOR_TIMEOUT_MS: ${PIPELINE_GENERATOR_TIMEOUT_MS:-10000}
-      PIPELINE_VALIDATOR_TIMEOUT_MS: ${PIPELINE_VALIDATOR_TIMEOUT_MS:-4500}
-      PIPELINE_MAX_RETRIES: ${PIPELINE_MAX_RETRIES:-1}
-      MAX_HISTORY_TURNS: ${MAX_HISTORY_TURNS:-10}
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
+    
 volumes:
   ai_redis_data:

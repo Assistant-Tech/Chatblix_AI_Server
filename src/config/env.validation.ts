@@ -32,10 +32,6 @@ export class EnvSchema {
   MAIN_BACKEND_INTERNAL_TOKEN!: string;
 
   @IsString()
-  @MinLength(32)
-  INTERNAL_API_TOKEN!: string;
-
-  @IsString()
   OPENROUTER_API_KEY!: string;
 
   @IsOptional()

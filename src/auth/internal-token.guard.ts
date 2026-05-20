@@ -33,7 +33,9 @@ export class InternalTokenGuard implements CanActivate {
       throw new UnauthorizedException('missing internal token');
     }
 
-    const expected = this.config.internalToken();
+    // One token covers both directions: same secret the cold-cache call sends
+    // to main-backend and that any caller must send to reach ai-backend.
+    const expected = this.config.mainBackendInternalToken();
     if (!safeEqual(provided, expected)) {
       throw new UnauthorizedException('invalid internal token');
     }

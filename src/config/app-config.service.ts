@@ -28,10 +28,6 @@ export class AppConfigService {
     return this.config.get('MAIN_BACKEND_INTERNAL_TOKEN', { infer: true });
   }
 
-  internalToken(): string {
-    return this.config.get('INTERNAL_API_TOKEN', { infer: true });
-  }
-
   openrouterKey(): string {
     return this.config.get('OPENROUTER_API_KEY', { infer: true });
   }

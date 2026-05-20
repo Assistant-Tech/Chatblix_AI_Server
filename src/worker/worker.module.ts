@@ -14,7 +14,7 @@ import { AppConfigService } from '../config/app-config.service';
       }),
       inject: [AppConfigService],
     }),
-    BullModule.registerQueue({ name: 'ai:reply' }),
+    BullModule.registerQueue({ name: 'ai.reply' }),
     ReplyModule,
   ],
   providers: [AiReplyWorker],
