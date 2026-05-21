@@ -1,0 +1,116 @@
+{
+  "info": {
+    "name": "Chatblix — AI Backend",
+    "description": "HTTP endpoints exposed by ai-backend.\n\n**Architecture note:** ai-backend is a stateless BullMQ worker. It has no HTTP reply endpoints — the LLM pipeline is triggered by consuming jobs from the `ai.reply` queue (enqueued by main-backend's AiReplyService). The only active HTTP surface is the health check.\n\n**Base URL:** `http://localhost:8000/ai/v1`\n\n**Auth:** Endpoints marked with 🔒 require `Authorization: Bearer <MAIN_BACKEND_INTERNAL_TOKEN>`.\n\n**To test the pipeline end-to-end:**\n1. Start main-backend (port 3000)\n2. Start ai-backend (port 8000)\n3. Configure a business profile via main-backend's PUT /v1/ai/profile\n4. Enable AI via POST /v1/ai/profile/enable\n5. Send an inbound message from a connected channel\n6. Watch the ai.reply queue in BullBoard: http://localhost:3000/api/queues\n7. ai-backend worker processes the job and returns the result",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "aiBaseUrl",        "value": "http://localhost:8000/ai/v1",  "type": "string" },
+    { "key": "internalToken",    "value": "<MAIN_BACKEND_INTERNAL_TOKEN>", "type": "string" },
+    { "key": "tenantId",         "value": "00000000-0000-0000-0000-000000000000", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "description": "Liveness checks. No authentication required.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{aiBaseUrl}}/health",
+              "host": ["{{aiBaseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Liveness probe used by load balancers and docker-compose healthcheck.\n\nExpected response:\n```json\n{ \"status\": \"ok\", \"uptime_s\": 42, \"version\": \"0.2.0\" }\n```\n\nIf this returns non-200, ai-backend is down and main-backend will fall back to escalation for all inbound messages."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Worker — Pipeline (BullMQ)",
+      "description": "The reply pipeline is NOT triggered via HTTP. These are documentation-only items showing what happens inside the worker.\n\nTo trigger the pipeline, enqueue a job to the `ai.reply` queue from main-backend (handled automatically by NormalizeConsumer → AiReplyService → AiReplyProducer).",
+      "item": [
+        {
+          "name": "[INFO] Job payload shape",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "http://example.com/THIS-IS-NOT-A-REAL-ENDPOINT",
+              "host": ["http://example.com"],
+              "path": ["THIS-IS-NOT-A-REAL-ENDPOINT"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_comment\": \"This is the BullMQ job payload shape — not an HTTP request. main-backend's AiReplyProducer enqueues jobs in this format.\",\n  \"business_id\": \"{{tenantId}}\",\n  \"conversation_id\": \"00000000-0000-0000-0000-000000000001\",\n  \"contact_id\": \"00000000-0000-0000-0000-000000000002\",\n  \"channel\": \"whatsapp\",\n  \"message\": {\n    \"content\": \"Do you deliver to Pokhara?\",\n    \"timestamp\": \"2026-05-21T10:00:00.000Z\"\n  },\n  \"history\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hi, I want to order something\",\n      \"timestamp\": \"2026-05-21T09:58:00.000Z\"\n    },\n    {\n      \"role\": \"assistant\",\n      \"content\": \"Hello! Welcome to Chatblix Demo Store. How can I help you today?\",\n      \"timestamp\": \"2026-05-21T09:58:05.000Z\",\n      \"metadata\": { \"suggested_reply_language\": \"en\" }\n    }\n  ],\n  \"options\": {\n    \"trace_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"request_id\": \"msg-uuid-from-main-backend\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "⚠️  THIS IS NOT A REAL ENDPOINT. This item documents the BullMQ job payload shape.\n\nThe job is enqueued by main-backend and consumed by ai-backend's AiReplyWorker. The worker calls ReplyService.handle(job.data) and returns { response, turnLog } as the job result."
+          }
+        },
+        {
+          "name": "[INFO] Job result shape",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "http://example.com/THIS-IS-NOT-A-REAL-ENDPOINT",
+              "host": ["http://example.com"],
+              "path": ["THIS-IS-NOT-A-REAL-ENDPOINT"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_comment\": \"This is the BullMQ job result returned by ai-backend. main-backend's AiHandoffService reads this from the QueueEvents 'completed' event.\",\n  \"response\": {\n    \"status\": \"replied\",\n    \"reply\": \"Yes! We deliver to Pokhara. Delivery takes 3-4 business days and costs NPR 200.\",\n    \"metadata\": {\n      \"triage\": {\n        \"intent\": \"product_inquiry.delivery\",\n        \"sentiment\": \"neutral\",\n        \"language\": \"en\"\n      },\n      \"attempts\": 1,\n      \"validator_pass\": true,\n      \"model_used\": \"anthropic/claude-sonnet-4-6\",\n      \"latency_ms\": 2340,\n      \"trace_id\": \"550e8400-e29b-41d4-a716-446655440000\"\n    }\n  },\n  \"turnLog\": {\n    \"status\": \"replied\",\n    \"triage\": { \"intent_path\": \"product_inquiry.delivery\", \"language\": { \"detected\": \"en\" } },\n    \"attempts\": [{ \"attempt_idx\": 0, \"verdict\": { \"pass\": true, \"violations\": [] } }],\n    \"validatorPass\": true,\n    \"retryCount\": 0,\n    \"highSeverityViolations\": 0,\n    \"intentPath\": \"product_inquiry.delivery\",\n    \"language\": \"en\",\n    \"shipped\": \"<reply>Yes! We deliver to Pokhara...</reply><metadata>{...}</metadata>\",\n    \"tokensIn\": null,\n    \"tokensOut\": null,\n    \"durationMs\": 2340,\n    \"traceId\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"modelTriage\": \"anthropic/claude-haiku-4.5\",\n    \"modelGenerator\": \"anthropic/claude-sonnet-4-6\",\n    \"modelValidator\": \"anthropic/claude-haiku-4.5\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "⚠️  THIS IS NOT A REAL ENDPOINT. This item documents the BullMQ job result shape.\n\nai-backend's AiReplyWorker returns this object. main-backend's AiHandoffService receives it via QueueEvents 'completed' event and:\n1. Writes the TurnLog row to turn_logs table\n2. Persists the bot message to messages table\n3. Enqueues outbound delivery\n4. On escalate: pauses the conversation, notifies operators"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cache — Redis Profile",
+      "description": "The business profile is stored in ai-backend's Redis by main-backend on every save. These items document the cache contract but require Redis CLI to test.",
+      "item": [
+        {
+          "name": "[INFO] Profile cache key format",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://example.com/THIS-IS-NOT-A-REAL-ENDPOINT",
+              "host": ["http://example.com"],
+              "path": ["THIS-IS-NOT-A-REAL-ENDPOINT"]
+            },
+            "description": "To inspect the profile cache in Redis, use redis-cli:\n\n```bash\n# ai-backend's Redis (port 6380 in docker-compose)\nredis-cli -p 6380\n\n# Check if profile is cached\nGET profile:<tenantId>\n\n# Check if compiled prompt is cached\nGET prompt:<tenantId>\n\n# Check request dedupe\nGET request:<requestId>\n```\n\nWhen main-backend saves a profile:\n1. PostgreSQL row is updated (source of truth)\n2. profile:{tenantId} is SET in shared Redis (BULLMQ_REDIS_URL, port 6379)\n3. prompt:{tenantId} is DEL'd so ai-backend recompiles on next request\n\nWhen ai-backend processes a job:\n1. GET profile:{tenantId} from its own Redis (REDIS_URL, port 6380)\n2. Cache miss → HTTP GET main-backend /v1/internal/businesses/{tenantId}\n3. SET profile:{tenantId} with 24h TTL"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Swagger UI",
+      "description": "Interactive API documentation served by ai-backend.",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/ai/v1/docs",
+              "host": ["http://localhost:8000"],
+              "path": ["ai", "v1", "docs"]
+            },
+            "description": "Open in browser: http://localhost:8000/ai/v1/docs\n\nDocuments the health endpoint and the BullMQ worker architecture."
+          }
+        }
+      ]
+    }
+  ]
+}
