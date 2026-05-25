@@ -39,7 +39,6 @@ export class GeneratorService {
       `LATEST_MESSAGE: ${message}`,
       `CONVERSATION_HISTORY: ${JSON.stringify(ctx.history || [])}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
-      `BUSINESS_CONTEXT: ${JSON.stringify(ctx.profile)}`,
       `TRIAGE: ${JSON.stringify(triage)}`,
     ];
     if (feedback) {
@@ -54,7 +53,8 @@ export class GeneratorService {
     const isRetry = Boolean(feedback);
     const temperature = isRetry ? 0.4 : 0.7;
 
-    const system = await this.prompts.getGeneratorPrompt(ctx.profile.name);
+    const staticPrompt = await this.prompts.getGeneratorPrompt(ctx.profile.name);
+    const system = ctx.systemPrompt ? `${ctx.systemPrompt}\n\n${staticPrompt}` : staticPrompt;
     const user = this.buildUserPayload(input);
 
     let chunkCount = 0;

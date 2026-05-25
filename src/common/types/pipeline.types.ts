@@ -93,6 +93,7 @@ export interface ContextPacket {
   contact_id: string;
   channel: string;
   trace_id?: string;
+  systemPrompt?: string;
 }
 
 export type PipelineEventName =

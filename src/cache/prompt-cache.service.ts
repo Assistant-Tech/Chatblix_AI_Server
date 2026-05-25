@@ -13,8 +13,8 @@ export class PromptCacheService {
     return this.redis.raw().get(this.key(businessId));
   }
 
-  async set(businessId: string, compiledPrompt: string): Promise<void> {
-    await this.redis.raw().set(this.key(businessId), compiledPrompt);
+  async set(businessId: string, compiledPrompt: string, ttlSeconds = 86400): Promise<void> {
+    await this.redis.raw().set(this.key(businessId), compiledPrompt, 'EX', ttlSeconds);
   }
 
   async invalidate(businessId: string): Promise<void> {
