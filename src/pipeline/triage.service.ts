@@ -5,11 +5,18 @@ import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isTriageShape } from '../common/utils/pipeline/contracts';
 import { synthesizeFallbackTriage } from '../common/utils/pipeline/triage-fallback';
+import type { ChatJsonUsage } from './openrouter.client';
 import type {
   ContextPacket,
   LanguageCode,
   Triage,
 } from '../common/types/pipeline.types';
+
+export interface TriageCallResult {
+  triage: Triage;
+  tokensIn: number | null;
+  tokensOut: number | null;
+}
 
 export interface CallTriageInput {
   ctx: ContextPacket;
@@ -63,7 +70,7 @@ export class TriageService {
     }
   }
 
-  async callTriage(input: CallTriageInput): Promise<Triage> {
+  async callTriage(input: CallTriageInput): Promise<TriageCallResult> {
     const model = this.config.triageModel();
     const { ctx, priorAssistantLang, stalledCountIncoming } = input;
 
@@ -72,16 +79,20 @@ export class TriageService {
       system = await this.prompts.getTriagePrompt(ctx.profile.name);
     } catch (e) {
       this.metrics.bump('triage_synthesized_fallback');
-      return synthesizeFallbackTriage({
-        priorAssistantLang,
-        stalledCountIncoming,
-        reason: `prompt_load_failed:${(e as Error).message}`,
-      });
+      return {
+        triage: synthesizeFallbackTriage({
+          priorAssistantLang,
+          stalledCountIncoming,
+          reason: `prompt_load_failed:${(e as Error).message}`,
+        }),
+        tokensIn: null,
+        tokensOut: null,
+      };
     }
 
     const user = this.buildUserPayload(input);
 
-    let response: { text: string };
+    let response: { text: string; usage: ChatJsonUsage | null };
     try {
       response = await this.llmClient.chatJson(
         {
@@ -98,11 +109,15 @@ export class TriageService {
     } catch (e) {
       this.metrics.bump('triage_synthesized_fallback');
       const err = e as { kind?: string };
-      return synthesizeFallbackTriage({
-        priorAssistantLang,
-        stalledCountIncoming,
-        reason: err?.kind ?? 'api_error',
-      });
+      return {
+        triage: synthesizeFallbackTriage({
+          priorAssistantLang,
+          stalledCountIncoming,
+          reason: err?.kind ?? 'api_error',
+        }),
+        tokensIn: null,
+        tokensOut: null,
+      };
     }
 
     let parsed = extractJsonObject(response.text);
@@ -114,13 +129,21 @@ export class TriageService {
 
     if (!parsed || !isTriageShape(parsed)) {
       this.metrics.bump('triage_synthesized_fallback');
-      return synthesizeFallbackTriage({
-        priorAssistantLang,
-        stalledCountIncoming,
-        reason: parsed ? 'schema_invalid' : 'json_parse_failed',
-      });
+      return {
+        triage: synthesizeFallbackTriage({
+          priorAssistantLang,
+          stalledCountIncoming,
+          reason: parsed ? 'schema_invalid' : 'json_parse_failed',
+        }),
+        tokensIn: null,
+        tokensOut: null,
+      };
     }
 
-    return parsed;
+    return {
+      triage: parsed,
+      tokensIn: response.usage?.prompt_tokens ?? null,
+      tokensOut: response.usage?.completion_tokens ?? null,
+    };
   }
 }

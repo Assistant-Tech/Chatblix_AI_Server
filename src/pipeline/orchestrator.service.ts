@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { AppConfigService } from '../config/app-config.service';
-import { TriageService } from './triage.service';
+import { TriageService, type TriageCallResult } from './triage.service';
 import { GeneratorService } from './generator.service';
 import { ValidatorService } from './validator.service';
 import { ResponseCleanerService } from './response-cleaner.service';
@@ -90,7 +90,7 @@ export class PipelineOrchestratorService {
     this.metrics.bump('total_turns');
 
     // --- Stage 1: Triage ---
-    const triage = await this.triage.callTriage({
+    const triageResult: TriageCallResult = await this.triage.callTriage({
       ctx,
       message,
       customerContext,
@@ -98,6 +98,9 @@ export class PipelineOrchestratorService {
       priorAgentQuestion,
       stalledCountIncoming,
     });
+    const { triage } = triageResult;
+    let accTokensIn = triageResult.tokensIn ?? 0;
+    let accTokensOut = triageResult.tokensOut ?? 0;
     yield { event: 'triage', data: triage };
 
     // --- Stage 1.5: Escalation rules (keyword + triage handoff). Short-circuits the generator. ---
@@ -123,6 +126,8 @@ export class PipelineOrchestratorService {
         lastEmittedReplyLen: 0,
         escalated: { reason: escalation.reason ?? 'unknown', matched_trigger: escalation.matched_trigger },
         duration_ms: Date.now() - tStart,
+        tokensIn: accTokensIn || null,
+        tokensOut: accTokensOut || null,
       };
       yield { event: '_done_internal', data: done };
       return;
@@ -217,16 +222,18 @@ export class PipelineOrchestratorService {
         candidate = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
       }
 
-      const verdict: Verdict = await this.validator.callValidator({
+      const validatorResult = await this.validator.callValidator({
         ctx,
         message,
         customerContext,
         triage,
         candidate,
       });
+      accTokensIn += validatorResult.tokensIn ?? 0;
+      accTokensOut += validatorResult.tokensOut ?? 0;
 
       // Compose tone + safety violations on top of the validator verdict.
-      const composed = this.composeVerdict(candidate, ctx.profile, verdict);
+      const composed = this.composeVerdict(candidate, ctx.profile, validatorResult.verdict);
 
       attempts.push({ attempt_idx: attemptIdx, candidate, verdict: composed });
 
@@ -287,6 +294,8 @@ export class PipelineOrchestratorService {
       attempts,
       lastEmittedReplyLen,
       duration_ms: Date.now() - tStart,
+      tokensIn: accTokensIn || null,
+      tokensOut: accTokensOut || null,
     };
     yield { event: '_done_internal', data: done };
   }

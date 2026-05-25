@@ -4,11 +4,18 @@ import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isVerdictShape } from '../common/utils/pipeline/contracts';
+import type { ChatJsonUsage } from './openrouter.client';
 import type {
   ContextPacket,
   Triage,
   Verdict,
 } from '../common/types/pipeline.types';
+
+export interface ValidatorCallResult {
+  verdict: Verdict;
+  tokensIn: number | null;
+  tokensOut: number | null;
+}
 
 export interface CallValidatorInput {
   ctx: ContextPacket;
@@ -52,7 +59,7 @@ export class ValidatorService {
     };
   }
 
-  async callValidator(input: CallValidatorInput): Promise<Verdict> {
+  async callValidator(input: CallValidatorInput): Promise<ValidatorCallResult> {
     const model = this.config.validatorModel();
 
     let system: string;
@@ -60,12 +67,12 @@ export class ValidatorService {
       system = await this.prompts.getValidatorPrompt();
     } catch (e) {
       this.metrics.bump('validator_soft_pass_on_error');
-      return this.softPass(`prompt_load_failed:${(e as Error).message}`);
+      return { verdict: this.softPass(`prompt_load_failed:${(e as Error).message}`), tokensIn: null, tokensOut: null };
     }
 
     const user = this.buildUserPayload(input);
 
-    let response: { text: string };
+    let response: { text: string; usage: ChatJsonUsage | null };
     try {
       response = await this.llmClient.chatJson(
         {
@@ -84,13 +91,17 @@ export class ValidatorService {
       if (err?.kind === 'timeout') this.metrics.bump('validator_timeout');
       else this.metrics.bump('validator_api_error');
       this.metrics.bump('validator_soft_pass_on_error');
-      return this.softPass(err?.kind ?? 'api_error');
+      return { verdict: this.softPass(err?.kind ?? 'api_error'), tokensIn: null, tokensOut: null };
     }
 
     const parsed = extractJsonObject(response.text);
     if (!parsed || !isVerdictShape(parsed)) {
       this.metrics.bump('validator_soft_pass_on_error');
-      return this.softPass(parsed ? 'schema_invalid' : 'json_parse_failed');
+      return {
+        verdict: this.softPass(parsed ? 'schema_invalid' : 'json_parse_failed'),
+        tokensIn: null,
+        tokensOut: null,
+      };
     }
 
     if (Array.isArray(parsed.violations)) {
@@ -110,6 +121,10 @@ export class ValidatorService {
         parsed.language_match !== false;
     }
 
-    return parsed;
+    return {
+      verdict: parsed,
+      tokensIn: response.usage?.prompt_tokens ?? null,
+      tokensOut: response.usage?.completion_tokens ?? null,
+    };
   }
 }

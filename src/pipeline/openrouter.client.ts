@@ -30,10 +30,15 @@ export interface ChatJsonOptions {
   timeoutMs?: number;
 }
 
+export interface ChatJsonUsage {
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+}
+
 export interface ChatJsonResult {
   text: string;
   raw: unknown;
-  usage: unknown;
+  usage: ChatJsonUsage | null;
 }
 
 export interface ChatStreamOptions extends ChatJsonOptions {
@@ -144,7 +149,11 @@ export class OpenRouterClient {
     if (typeof text !== 'string') {
       throw new OpenRouterError('OpenRouter returned no content', 'no_content', undefined, json);
     }
-    return { text, raw: json, usage: json?.usage ?? null };
+    const rawUsage = json?.usage as { prompt_tokens?: number; completion_tokens?: number } | null | undefined;
+    const usage: ChatJsonUsage | null = rawUsage
+      ? { prompt_tokens: rawUsage.prompt_tokens ?? null, completion_tokens: rawUsage.completion_tokens ?? null }
+      : null;
+    return { text, raw: json, usage };
   }
 
   async *chatStream(opts: ChatStreamOptions): AsyncGenerator<string> {

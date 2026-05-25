@@ -136,4 +136,6 @@ export interface DoneInternalData {
   lastEmittedReplyLen: number;
   escalated?: { reason: string; matched_trigger?: string };
   duration_ms: number;
+  tokensIn: number | null;
+  tokensOut: number | null;
 }

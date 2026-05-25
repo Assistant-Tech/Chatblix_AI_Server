@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   ChatJsonOptions,
   ChatJsonResult,
+  ChatJsonUsage,
   ChatStreamOptions,
   OpenRouterClient,
   OpenRouterError,
@@ -139,7 +140,7 @@ export class LLMClientService {
     result: ChatJsonResult | null,
   ): void {
     const latencyMs = Date.now() - startMs;
-    const usage = (result?.usage as { prompt_tokens?: number; completion_tokens?: number } | null) ?? null;
+    const usage: ChatJsonUsage | null = result?.usage ?? null;
     const tokensIn = usage?.prompt_tokens ?? null;
     const tokensOut = usage?.completion_tokens ?? null;
     this.logger.log(

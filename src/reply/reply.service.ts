@@ -73,10 +73,10 @@ export class ReplyService {
     return {
       ctx,
       message: req.message.content,
-      customerContext: {},
+      customerContext: buildCustomerContext(ctx.history),
       priorAssistantLang: inferPriorAssistantLang(ctx.history),
       priorAgentQuestion: inferPriorAgentQuestion(ctx.history),
-      stalledCountIncoming: 0,
+      stalledCountIncoming: computeStalledCount(ctx.history),
     };
   }
 
@@ -122,8 +122,8 @@ export class ReplyService {
       intentPath: triage?.intent_path ?? null,
       language: triage?.language?.detected ?? null,
       shipped: done?.shipped ?? '',
-      tokensIn: null,
-      tokensOut: null,
+      tokensIn: done?.tokensIn ?? null,
+      tokensOut: done?.tokensOut ?? null,
       durationMs: latency_ms,
       traceId: req.options?.trace_id ?? null,
       modelTriage: this.config.triageModel(),
@@ -252,6 +252,41 @@ function inferPriorAgentQuestion(history: IncomingHistoryMessage[]): string | nu
     return null;
   }
   return null;
+}
+
+/**
+ * Count consecutive assistant turns at the tail of history with no customer
+ * reply in between. Tells the triage stage how long the bot has been
+ * waiting for a response — used to detect and handle stalled conversations.
+ */
+function computeStalledCount(history: IncomingHistoryMessage[]): number {
+  let count = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === 'assistant') count++;
+    else break;
+  }
+  return count;
+}
+
+/**
+ * Merge extracted_data from all prior assistant turns into a single object.
+ * Later turns overwrite earlier ones for the same key, so the most recent
+ * captured value wins. Empty / null values are skipped so they don't erase
+ * previously captured data.
+ */
+function buildCustomerContext(history: IncomingHistoryMessage[]): Record<string, unknown> {
+  const ctx: Record<string, unknown> = {};
+  for (const msg of history) {
+    if (msg.role !== 'assistant') continue;
+    const extracted = msg.metadata?.['extracted_data'] as Record<string, unknown> | undefined;
+    if (!extracted) continue;
+    for (const [key, value] of Object.entries(extracted)) {
+      if (value !== null && value !== undefined && value !== '') {
+        ctx[key] = value;
+      }
+    }
+  }
+  return ctx;
 }
 
 function mapEscalationReason(raw: string): ReplyResponseEscalate['reason'] {
