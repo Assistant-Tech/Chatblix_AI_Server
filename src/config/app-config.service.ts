@@ -48,10 +48,6 @@ export class AppConfigService {
     return this.config.get('PIPELINE_GENERATOR_MODEL', { infer: true });
   }
 
-  generatorModelHighValue(): string {
-    return this.config.get('PIPELINE_GENERATOR_MODEL_HIGH_VALUE', { infer: true });
-  }
-
   validatorModel(): string {
     return this.config.get('PIPELINE_VALIDATOR_MODEL', { infer: true });
   }

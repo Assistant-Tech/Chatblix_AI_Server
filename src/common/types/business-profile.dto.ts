@@ -244,11 +244,4 @@ export class BusinessProfileDto {
   @Type(() => OfferDto)
   current_offers?: OfferDto[];
 
-  // NPR threshold above which the pipeline should treat a deal as high-value
-  // (used by the triage prompt to gate escalation / model upgrades). Numeric
-  // currency is NPR by convention for the Nepal/Kathmandu target market.
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  high_value_threshold?: number;
 }

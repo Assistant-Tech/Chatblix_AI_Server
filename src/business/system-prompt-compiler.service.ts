@@ -281,13 +281,9 @@ function renderConcernTriggers(profile: BusinessProfileDto): string {
 
 function renderEscalation(profile: BusinessProfileDto): string {
   const { escalation } = profile;
-  const lines: string[] = [
+  return [
     '## ESCALATION',
     `Trigger keywords: ${escalation.triggers.join(', ')}`,
     `Handoff line: ${escalation.handoff_message}`,
-  ];
-  if (typeof profile.high_value_threshold === 'number') {
-    lines.push(`High-value threshold: NPR ${profile.high_value_threshold}`);
-  }
-  return lines.join('\n');
+  ].join('\n');
 }

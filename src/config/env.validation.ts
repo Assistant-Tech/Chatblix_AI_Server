@@ -52,10 +52,6 @@ export class EnvSchema {
 
   @IsOptional()
   @IsString()
-  PIPELINE_GENERATOR_MODEL_HIGH_VALUE: string = 'anthropic/claude-opus-4.7';
-
-  @IsOptional()
-  @IsString()
   PIPELINE_VALIDATOR_MODEL: string = 'anthropic/claude-haiku-4.5';
 
   @IsOptional()
