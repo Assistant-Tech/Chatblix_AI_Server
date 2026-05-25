@@ -3,6 +3,10 @@ import { AppConfigService } from '../../config/app-config.service';
 import type { BusinessProfileDto } from '../types/business-profile.dto';
 
 const TIMEOUT_MS = 5000;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 300;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 @Injectable()
 export class MainBackendClient {
@@ -18,8 +22,28 @@ export class MainBackendClient {
    * Auth: Bearer MAIN_BACKEND_INTERNAL_TOKEN
    *
    * Returns 404 if the profile doesn't exist or AI is disabled for the tenant.
+   * Retries up to MAX_RETRIES times on transient network/5xx errors (not 404).
    */
   async getProfile(tenantId: string): Promise<BusinessProfileDto> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        return await this.fetchProfile(tenantId);
+      } catch (e) {
+        if (e instanceof NotFoundException) throw e;
+        lastError = e;
+        if (attempt < MAX_RETRIES) {
+          this.logger.warn(
+            `main-backend fetch attempt ${attempt + 1}/${MAX_RETRIES + 1} failed for business_id=${tenantId} — retrying in ${RETRY_DELAY_MS}ms`,
+          );
+          await sleep(RETRY_DELAY_MS);
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  private async fetchProfile(tenantId: string): Promise<BusinessProfileDto> {
     const url = `${this.config.mainBackendInternalUrl()}/api/v1/internal/businesses/${tenantId}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

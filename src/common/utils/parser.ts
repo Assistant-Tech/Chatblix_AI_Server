@@ -1,3 +1,4 @@
+import { extractJsonObject } from './pipeline/contracts';
 import type { AgentMetadata } from '../types/pipeline.types';
 
 const FALLBACK_METADATA: Required<Pick<AgentMetadata,
@@ -324,24 +325,3 @@ function sliceBalancedObject(s: string, start: number): { text: string; complete
   return { text: s.slice(start), complete: false };
 }
 
-function extractJsonObject(s: string): unknown {
-  for (let start = 0; start < s.length; start++) {
-    if (s[start] === '{') {
-      let depth = 0;
-      for (let i = start; i < s.length; i++) {
-        if (s[i] === '{') depth++;
-        else if (s[i] === '}') {
-          depth--;
-          if (depth === 0) {
-            try {
-              return JSON.parse(s.slice(start, i + 1));
-            } catch {
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-  return null;
-}

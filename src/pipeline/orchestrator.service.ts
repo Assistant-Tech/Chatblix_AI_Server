@@ -57,17 +57,21 @@ export class PipelineOrchestratorService {
 
   private synthesizeHandoffCandidate(triage: Triage | null, priorLang: LanguageCode | null): string {
     const lang = (triage?.language?.detected as LanguageCode | undefined) || priorLang || 'romanized_ne';
-    const replyText =
-      lang === 'en'
-        ? 'One moment, a colleague will respond shortly. Thanks for your patience.'
-        : 'Hajur, ek minute ma colleague le respond garchha. Patience ko lagi dhanyabad.';
+    let replyText: string;
+    if (lang === 'en') {
+      replyText = 'One moment, a colleague will respond shortly. Thanks for your patience.';
+    } else if (lang === 'mixed') {
+      replyText = 'One moment / Ek minute — colleague le respond garchha. Patience ko lagi dhanyabad.';
+    } else {
+      replyText = 'Hajur, ek minute ma colleague le respond garchha. Patience ko lagi dhanyabad.';
+    }
     const metadata = {
       lead_score: 0,
       stage: 'warm',
       intent: 'inquiry',
       extracted_data: {},
       next_step: 'escalate',
-      suggested_reply_language: lang === 'en' ? 'en' : 'romanized_ne',
+      suggested_reply_language: lang,
       handoff_required: true,
       handoff_context: 'System error during reply generation. Manual response needed.',
       tags: ['system_error', 'handoff'],
@@ -106,10 +110,11 @@ export class PipelineOrchestratorService {
     // --- Stage 1.5: Escalation rules (keyword + triage handoff). Short-circuits the generator. ---
     const escalation = this.escalation.check(message, ctx.history, ctx.profile, triage);
     if (escalation.escalate) {
+      const detectedLang = (triage?.language?.detected as LanguageCode | undefined) ?? priorAssistantLang ?? 'romanized_ne';
       const handoffText =
         ctx.profile.escalation?.handoff_message ||
         this.synthesizeHandoffCandidate(triage, priorAssistantLang).replace(/<[^>]+>/g, '');
-      const shipped = wrapHandoff(handoffText, escalation.reason);
+      const shipped = wrapHandoff(handoffText, escalation.reason, detectedLang);
       yield {
         event: 'escalate',
         data: {
@@ -347,11 +352,12 @@ function extractReplyText(candidate: string): string {
   return m ? m[1] : candidate;
 }
 
-function wrapHandoff(text: string, reason: string | undefined): string {
+function wrapHandoff(text: string, reason: string | undefined, lang: LanguageCode = 'romanized_ne'): string {
   const metadata = {
     next_step: 'escalate',
     handoff_required: true,
     handoff_context: `escalation:${reason ?? 'unknown'}`,
+    suggested_reply_language: lang,
     tags: ['escalate', reason ?? 'unknown'],
   };
   return `<reply>${text}</reply><metadata>${JSON.stringify(metadata)}</metadata>`;
