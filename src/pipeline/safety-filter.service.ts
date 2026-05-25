@@ -9,8 +9,9 @@ export interface SafetyCheckResult {
 // (the AI shouldn't be quoting back emails/phones/cards), not to do
 // full DLP — that's the main backend's job for inbound channel content.
 const EMAIL_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
-// 10+ digit runs with optional spaces / dashes / +country prefix.
-const PHONE_RE = /(?:\+?\d[\s\-]?){10,}/;
+// Phone: 3-3-4+ digit grouping (≥10 digits). Negative lookbehind excludes
+// product codes / order IDs that trail a dash, letter, digit, or # character.
+const PHONE_RE = /(?<![-A-Za-z0-9#])(?:\+\d{1,3}[\s\-.]?)?\d{3}[\s\-.]?\d{3}[\s\-.]?\d{4,}/;
 // 13-19 digit groupings — covers most card numbers; intentionally loose.
 const CARD_RE = /\b(?:\d[ -]?){13,19}\b/;
 
