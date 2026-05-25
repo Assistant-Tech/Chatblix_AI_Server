@@ -77,7 +77,7 @@ English loanwords (face mask, soap, cream, order, delivery, payment, address, ph
 
 ### Pure-data inheritance
 
-A phone number, OTP, address digits, single emoji, single typo'd noun, or a one-word "ok / yes / main" carries **zero language signal**. Set `language.inheritance_used: true` and inherit the prior assistant turn's language. If no prior turn exists, default to `romanized_ne`.
+A phone number, OTP, address digits, single emoji, single typo'd noun, or a one-word "ok / yes / main" carries **zero language signal**. Set `language.inheritance_used: true` and inherit the prior assistant turn's language. If no prior turn exists, default to `BUSINESS_CONTEXT.language` (fall back to `romanized_ne` if that field is missing or null).
 
 ### `intent_path` — pick exactly one
 
@@ -87,7 +87,7 @@ Walk the addendum's decision flowchart in order; pick the first match.
 |---|---|
 | `greeting` | "namaste", "hi", greetings without a question |
 | `direct_factual` | location, hours, delivery to city, payment methods, return policy, availability ("X cha?", "home delivery huncha?", "COD milcha?", "esewa milcha?") |
-| `concern` | skin/hair concern: pimple, daag, oily skin, dry skin, hair fall, glow |
+| `concern` | A problem the customer wants solved. Match against `BUSINESS_CONTEXT.concern_triggers` if present, otherwise use domain defaults. Skincare: pimple, daag, oily skin, dry skin, hair fall, glow. Clothing: size/fit, color fading, fabric feel. Food: late delivery, dietary restriction. Salon: prior-treatment reaction, sensitivity. Electronics: not working, compatibility. Service: scope or timeline concern. |
 | `evaluation_question` | follow-up about a product/recommendation already in scope: efficacy ("majjale jaanxa?", "really works?", "pakka kaam garcha?", "ramro huncha?"), how-to-use ("kati patak lagaune?"), side effects, time-to-result ("kati din ma farak?"), social proof ("aru le kasto bhaneko?"). Customer is **evaluating**, not buying. |
 | `named_product_no_price` | product named, no price/buying ask |
 | `named_product_price_ask` | "kati ho", "how much", "rate", "cost" with a product |
@@ -194,7 +194,7 @@ Examples that are `direct_factual` (NOT buying):
 | `modify_order` | "order ko address change", existing order changes |
 | `invoice_request` | invoice / receipt / bill ko lagi |
 | `confusion` | LITERAL confusion markers only: "k vanna khojeko?", "samjhena", "matlab?", "what?", "bujhena". Do NOT route here just because a customer message is short or you are unsure — those are usually `evaluation_question`, `direct_factual`, or pure-data inheritance. |
-| `stalled` | same non-progressing reply twice in a row ("hajur" after "hajur") |
+| `stalled` | customer's latest message is a non-answer to the agent's most recent question AND `STALLED_COUNT_INCOMING + 1` would reach 2 |
 | `abusive` | profanity, hostile, threats |
 | `meta_question` | "are you a bot / AI / human?" |
 | `bulk_inquiry` | quantity ≥ 5 units OR shop/salon/event/wholesale words ("10 ota chahiyo", "50 packs", "shop ko lagi", "event ko lagi") |
@@ -205,7 +205,7 @@ Examples that are `direct_factual` (NOT buying):
 | `discovery_open` | open browse: "k k cha?", "naya k aayo?", "show me what you have", "what's new" — no concern, no product named |
 | `scheduling_request` | specific time / day delivery ask: "Saturday delivery huncha?", "kal pathaune", "morning ma chahincha", "evening ma" |
 | `samples_request` | "sample milcha?", "trial size cha?", "tester cha?", "small bottle" |
-| `medical_mention` | medical condition, allergy, pregnancy, nursing, sensitive skin disease: "eczema", "psoriasis", "allergy cha", "pregnant chu", "doctor le bhaneko" |
+| `medical_mention` | any health condition, medical restriction, or cited professional health advice. Skincare: eczema, psoriasis, pregnancy, nursing, "doctor le bhaneko". Food: food allergy, diabetes, medical dietary restriction. Any domain: if the customer mentions a health condition in the context of using the product/service, route here and always handoff — never claim product safety for medical contexts. |
 
 ### `closing_state`
 
@@ -625,6 +625,34 @@ CUSTOMER_CONTEXT: {}
   "handoff_reason": null,
   "stalled_count": 0,
   "notes_for_generator": "Open browse. Don't dump catalog. Ask ONE narrowing question — face / hair / gift."
+}
+```
+
+### Example J — high-value order exceeds threshold → handoff
+
+```
+LATEST_MESSAGE: 5 ota laptop chahiyo, total kati huncha?
+PRIOR_ASSISTANT_LANGUAGE: romanized_ne
+CUSTOMER_CONTEXT: {"product_interest": "Laptop Model X"}
+BUSINESS_CONTEXT: {"high_value_threshold": 50000, "product_catalog": [{"name": "Laptop Model X", "price": 85000}]}
+```
+
+```json
+{
+  "language": {"detected": "romanized_ne", "inheritance_used": false, "markers_found": ["chahiyo", "kati", "huncha"], "language_inheritance_reason": null},
+  "intent_path": "named_product_price_ask",
+  "concern": null,
+  "named_product": "Laptop Model X",
+  "extracted_data_delta": {"name": null, "phone": null, "email": null, "address": null, "location": null, "product_interest": "Laptop Model X", "budget_range": null, "timeline": null},
+  "closing_state": {"in_closing": false, "stage": null, "stage_1_already_fired": false, "missing_fields": []},
+  "buying_signal": false,
+  "explicit_price_ask": true,
+  "process_question_topic": null,
+  "edge_case_flags": ["bulk_quantity_signal"],
+  "handoff_required": true,
+  "handoff_reason": "Order value 5 x NPR 85,000 = NPR 425,000 exceeds high_value_threshold NPR 50,000. Manual sales required.",
+  "stalled_count": 0,
+  "notes_for_generator": "High-value bulk order. Acknowledge interest, do NOT quote total, hand off to sales team."
 }
 ```
 

@@ -29,6 +29,8 @@ export class SystemPromptCompilerService {
       renderFaqs(profile),
       renderPolicies(profile),
       renderEscalation(profile),
+      renderClosingFlow(profile),
+      renderConcernTriggers(profile),
     ];
     return sections.filter((s) => s.length > 0).join('\n\n');
   }
@@ -210,6 +212,71 @@ function renderPolicies(profile: BusinessProfileDto): string {
     }
   }
   return lines.join('\n');
+}
+
+function renderClosingFlow(profile: BusinessProfileDto): string {
+  const type = profile.business_type?.trim().toLowerCase();
+  const lines: string[] = ['## CLOSING FLOW'];
+
+  if (type === 'salon') {
+    lines.push(
+      'Type: appointment',
+      '',
+      'Stage 1 captures: naam, phone, preferred date + time.',
+      'Stage 2 collects whichever of naam / phone / datetime is missing.',
+      'Stage 3 confirms: naam, service, phone, appointment datetime.',
+      '',
+      'Vocabulary:',
+      '  - "booking confirm garchu" not "parcel pathaucha"',
+      '  - "Appointment: [datetime]" not "Delivery: [address]"',
+      '  - "Details confirm, shortly connect garchhau" not "Payment link pathaucha"',
+    );
+  } else if (type === 'service') {
+    lines.push(
+      'Type: service quote',
+      '',
+      'Stage 1 captures: naam, phone, brief scope of work.',
+      'Stage 2 collects whichever of naam / phone / scope is missing.',
+      'Stage 3 confirms: naam, service description, phone, timeline.',
+      '',
+      'Vocabulary:',
+      '  - "team visit arrange garchu" or "quote pathaucha" not "parcel pathaucha"',
+      '  - "Scope: [scope]" not "Delivery: [address]"',
+    );
+  } else {
+    lines.push(
+      'Type: delivery',
+      '',
+      'Stage 1 captures: naam, phone, delivery address.',
+      'Stage 2 collects whichever of naam / phone / address / address_specifics is missing.',
+      'Stage 3 confirms: naam, product + price, phone, delivery address.',
+      '',
+      'Vocabulary: parcel, dispatch, delivery address.',
+    );
+  }
+
+  return lines.join('\n');
+}
+
+function renderConcernTriggers(profile: BusinessProfileDto): string {
+  const type = profile.business_type?.trim().toLowerCase();
+  if (!type) return '';
+
+  const examplesByType: Record<string, string> = {
+    skincare: 'pimple, daag, oily skin, dry skin, hair fall, glow, dark circles, dullness',
+    clothing: 'size/fit issue, color fading after wash, fabric feel, shrinkage, occasion mismatch',
+    food: 'late delivery, wrong order received, dietary need (veg/jain/allergy), food quality',
+    salon: 'prior treatment reaction, skin/hair sensitivity before service, incompatible prior treatment',
+    electronics: 'product not working, compatibility issue, warranty concern, damage in transit',
+    service: 'scope uncertainty, timeline concern, credentials doubt, cost overrun worry',
+  };
+
+  const examples = examplesByType[type];
+  const body = examples
+    ? `Domain-specific concern triggers for ${type}: ${examples}.`
+    : `Route to concern when the customer raises a problem or need related to a ${type} product or service.`;
+
+  return ['## CONCERN TRIGGERS', body].join('\n');
 }
 
 function renderEscalation(profile: BusinessProfileDto): string {

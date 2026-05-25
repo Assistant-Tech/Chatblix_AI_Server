@@ -119,6 +119,7 @@ If a price appears without any of those, violation.
 - A different product is now in scope
 - A discount is being applied
 - Customer pushed back on price and the reply is justifying
+- `TRIAGE.closing_state.stage == 3` — the Stage 3 final confirmation bullet summary is explicitly allowed to include the price once as part of the order recap
 
 ### Rule 5 — no_padding_with_known_facts (MEDIUM)
 
@@ -208,7 +209,7 @@ Compute approximate similarity to the prior assistant turn (>70% token overlap) 
 
 **Check:** Any business fact the reply asserts (price, location, delivery time, payment method, return window, product availability) must be sourceable from `BUSINESS_CONTEXT` or the conversation history. If the reply states a fact that cannot be sourced, violation.
 
-This is best-effort; flag suspicions, escalate as `medium` if uncertain rather than `high`. Use `high` only when the asserted fact directly contradicts `BUSINESS_CONTEXT`.
+Severity guidance: use `high` when the asserted fact directly contradicts a value present in `BUSINESS_CONTEXT` (wrong price, wrong location name, unsupported payment method, return window that doesn't match). Use `medium` when `BUSINESS_CONTEXT` is silent on the field and you cannot confirm either way. Never upgrade an uncertain check to `high`.
 
 ### Rule 19 — closing_stage_matches (HIGH)
 
@@ -244,7 +245,16 @@ If `stage_1_already_fired == true` and the reply contains another full STAGE 1 p
 
 **Check:** When `TRIAGE.intent_path == "concern"`, the reply has ALL of:
 - ZERO ingredient lists ("turmeric ra sandalwood le...", "with niacinamide and...")
-- ZERO mechanism claims. The forbidden list (case-insensitive substring match): "anti-bacterial ho", "skin tone even-out", "pH balance", "deep cleansing", "pores tight garcha", "pores close garcha", "pores shrink garcha", "oil control garcha", "blackhead remove", "dead skin remove", "exfoliate garcha", "collagen boost", "hydration lock", "moisture lock", "barrier repair", "skin renewal", "cell regeneration", "anti-aging garcha", "wrinkle reduce", "hyperpigmentation hatauchha", "melanin reduce". These describe how the product *works* — shopkeepers don't talk like this. Use outcome/timeframe phrasing instead ("oily skin lai suit garcha", "2-3 hapta ma farak dekhincha", "regular use le ramro huncha").
+- ZERO mechanism claims. Two tiers:
+
+  **Universal — forbidden for ALL business types** (case-insensitive substring match):
+  - "cures", "treats", "heals", "clinically proven", "doctor recommended", "100% guaranteed", "scientifically tested"
+  - Any explicit health/medical efficacy claim tied to a product
+
+  **Skincare-specific — forbidden only when `BUSINESS_CONTEXT.business_type` is `skincare` or unset** (case-insensitive substring match):
+  - "anti-bacterial ho", "skin tone even-out", "pH balance", "deep cleansing", "pores tight garcha", "pores close garcha", "pores shrink garcha", "oil control garcha", "blackhead remove", "dead skin remove", "exfoliate garcha", "collagen boost", "hydration lock", "moisture lock", "barrier repair", "skin renewal", "cell regeneration", "anti-aging garcha", "wrinkle reduce", "hyperpigmentation hatauchha", "melanin reduce"
+
+  Do NOT apply the skincare-specific list to electronics, food, clothing, salon, or service tenants — those domains have different mechanism language that is not forbidden. Use outcome/timeframe phrasing instead ("2-3 hapta ma farak dekhincha", "regular use le ramro huncha", "oily skin lai suit garcha").
 - ZERO two-product pitches in one reply
 - ZERO forced-choice closes ("duitai ko details chahiyo ki kunai ek?")
 - ZERO marketing adjectives: "amazing", "premium", "high-quality", "ekdamai dami", "world-class", "luxurious". **Explicitly NOT marketing adjectives** (do NOT flag these): "bestseller", "bestseller wala", "best wala", "regular customer le linchha", "hamro yaha ko", "majjale", "ramro", "pakka". These are the approved Nepali shopkeeper outcome-cue vocabulary; flagging them is a false positive.
@@ -288,20 +298,11 @@ For Romanized Nepali: `niyamanusar`, `aagrahapurvak`, `vinit prarthana cha` — 
 
 Flag as HIGH when the reply asserts the product is safe / suitable for the medical condition.
 
-### Rule 33 — particle_overuse (MEDIUM)
+### Rule 30 — festive_acknowledgment (LOW)
 
-**Check:** Nepali sentence-final particles and `hajur` are flavor, not decoration. The reply violates this rule when ANY of:
+**Check:** When `TRIAGE.edge_case_flags` contains `festival_mention`, the reply opens with a one-line greeting matching the festival ("Dashain ko shubhakamana", "Subha Tihar", "Teej ko shubhakamana", etc.). Do NOT block on this alone — soft-pass with a logged warning. The greeting must be ONE line, not a paragraph.
 
-- More than ONE occurrence of `hajur` in the reply (case-insensitive, word-boundary match). The single most common over-use pattern is "Hajur, … Order garne ho hajur?" — opening AND closing both use `hajur`. Pick one. Exception: STAGE 3 final-confirmation bullet template is allowed up to one `hajur` in the heading line ("Order milyo hajur:") and the reply still passes if the trailing line does NOT repeat `hajur`. If STAGE 3 has `hajur` in both heading AND trailing line, that's still a violation.
-- More than ONE occurrence of `hai` (case-insensitive, word-boundary match — not inside other words like "haina", "hajur", "chahincha"). Count `hai` only as a standalone word.
-- More than ONE occurrence of `ni` as a standalone particle. (Don't count "ni" inside words like "niko", "kunai".)
-- `hai` appears on a sentence immediately before a sentence ending in `hajur?` (the closer carries its own warmth — adding `hai` to the sentence right before it is the most common over-use trap).
-- `hai` and `ni` both appear on the same clause (e.g. "ramro huncha ni hai" — pick one).
-- `hola` appears on a non-imperative sentence (e.g. "skin niko huncha hola" is wrong; "lagaunu hola" is correct).
-
-**Evidence rule:** quote the offending sentence(s) and identify which particle/`hajur` is the redundant one. **Fix-hint pattern:** "Drop the `hajur` from '<opening|closing>' sentence; the other `hajur` already carries the politeness." Or: "Drop the `hai` on '<offending sentence>'; the closer/preceding particle already carries the tone."
-
-**Why this matters:** Real Nepali speech uses `hajur` once per turn, not twice. Sprinkles particles, doesn't saturate. A reply that opens with "Hajur," AND closes with "hajur?" reads servile and bot-like. ONE `hajur` and ONE well-placed sentence particle is the shopkeeper voice.
+If the reply is in English, the appropriate greeting in English is acceptable ("Happy Dashain", etc.).
 
 ### Rule 31 — no_repeat_close_pitch (HIGH)
 
@@ -334,11 +335,20 @@ Exceptions (no violation even if pattern matches):
 
 Customers asking evaluation questions trust you with their doubt. The only correct move is to answer the doubt.
 
-### Rule 30 — festive_acknowledgment (LOW)
+### Rule 33 — particle_overuse (MEDIUM)
 
-**Check:** When `TRIAGE.edge_case_flags` contains `festival_mention`, the reply opens with a one-line greeting matching the festival ("Dashain ko shubhakamana", "Subha Tihar", "Teej ko shubhakamana", etc.). Do NOT block on this alone — soft-pass with a logged warning. The greeting must be ONE line, not a paragraph.
+**Check:** Nepali sentence-final particles and `hajur` are flavor, not decoration. The reply violates this rule when ANY of:
 
-If the reply is in English, the appropriate greeting in English is acceptable ("Happy Dashain", etc.).
+- More than ONE occurrence of `hajur` in the reply (case-insensitive, word-boundary match). The single most common over-use pattern is "Hajur, … Order garne ho hajur?" — opening AND closing both use `hajur`. Pick one. Exception: STAGE 3 final-confirmation bullet template is allowed up to one `hajur` in the heading line ("Order milyo hajur:") and the reply still passes if the trailing line does NOT repeat `hajur`. If STAGE 3 has `hajur` in both heading AND trailing line, that's still a violation.
+- More than ONE occurrence of `hai` (case-insensitive, word-boundary match — not inside other words like "haina", "hajur", "chahincha"). Count `hai` only as a standalone word.
+- More than ONE occurrence of `ni` as a standalone particle. (Don't count "ni" inside words like "niko", "kunai".)
+- `hai` appears on a sentence immediately before a sentence ending in `hajur?` (the closer carries its own warmth — adding `hai` to the sentence right before it is the most common over-use trap).
+- `hai` and `ni` both appear on the same clause (e.g. "ramro huncha ni hai" — pick one).
+- `hola` appears on a non-imperative sentence (e.g. "skin niko huncha hola" is wrong; "lagaunu hola" is correct).
+
+**Evidence rule:** quote the offending sentence(s) and identify which particle/`hajur` is the redundant one. **Fix-hint pattern:** "Drop the `hajur` from '<opening|closing>' sentence; the other `hajur` already carries the politeness." Or: "Drop the `hai` on '<offending sentence>'; the closer/preceding particle already carries the tone."
+
+**Why this matters:** Real Nepali speech uses `hajur` once per turn, not twice. Sprinkles particles, doesn't saturate. A reply that opens with "Hajur," AND closes with "hajur?" reads servile and bot-like. ONE `hajur` and ONE well-placed sentence particle is the shopkeeper voice.
 
 ---
 
@@ -354,7 +364,7 @@ If the reply is in English, the appropriate greeting in English is acceptable ("
   - `next_step`: `qualify | recommend | close | escalate | follow_up_24h | await_payment`.
   - `suggested_reply_language`: `en | romanized_ne | mixed`.
   - `timeline`: `immediate | this_week | this_month | exploring | null`.
-- `lead_score` and `stage` move monotonically forward when compared with the prior assistant turn's metadata (if available).
+- `lead_score` and `stage` monotonicity is enforced by the orchestrator, not the validator. Do not flag violations for this field.
 
 If invalid, set `metadata_valid: false` and add a violation under `rule_id: 1`.
 

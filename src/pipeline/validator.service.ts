@@ -96,10 +96,18 @@ export class ValidatorService {
     if (Array.isArray(parsed.violations)) {
       parsed.violations = parsed.violations.filter((v) => {
         const id = Number(v?.rule_id);
-        const ok = Number.isInteger(id) && id >= 1 && id <= 30;
+        const ok = Number.isInteger(id) && id >= 1 && id <= 33;
         if (ok) this.metrics.bumpViolation(id);
         return ok;
       });
+
+      const highCount = parsed.violations.filter((v) => v.severity === 'high').length;
+      const mediumCount = parsed.violations.filter((v) => v.severity === 'medium').length;
+      parsed.pass =
+        highCount === 0 &&
+        mediumCount < 2 &&
+        parsed.metadata_valid !== false &&
+        parsed.language_match !== false;
     }
 
     return parsed;
