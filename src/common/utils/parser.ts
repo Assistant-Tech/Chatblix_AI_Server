@@ -62,6 +62,12 @@ export function parseAgentOutput(raw: string, userMessage: string = ''): ParseRe
 
   const isComplaint = COMPLAINT_PATTERNS.test(userMessage);
 
+  // Unwrap markdown code fences — some models wrap the entire output in ```...```
+  // despite the prompt explicitly forbidding it (e.g. Gemma, smaller Haiku variants).
+  raw = raw.replace(/```(?:[^\n]*)?\n([\s\S]*?)```/g, '$1');
+  raw = raw.replace(/`{3}[^\n]*/g, '');
+
+  // Collapse double <reply> tags (may be adjacent or separated by a code fence opener).
   raw = raw.replace(/<reply>\s*<reply>/gi, '<reply>');
 
   const replyMatch = raw.match(/<reply>([\s\S]*?)<\/reply>/i);
@@ -86,7 +92,9 @@ export function parseAgentOutput(raw: string, userMessage: string = ''): ParseRe
 
   let reply: string;
   if (replyMatch) {
-    reply = sanitizeReplyText(replyMatch[1].trim());
+    // Strip any nested <reply> tags that survived deduplication
+    const inner = replyMatch[1].trim().replace(/<\/?reply>/gi, '').trim();
+    reply = sanitizeReplyText(inner);
   } else {
     const openIdx = raw.search(/<reply>/i);
     if (openIdx >= 0) {
