@@ -25,13 +25,20 @@ export class AiReplyWorker extends WorkerHost {
       `processing job=${job.id} business_id=${job.data.business_id} conversation_id=${job.data.conversation_id}`,
     );
 
-    const result = await withTimeout(this.replyService.handle(job.data), JOB_TIMEOUT_MS);
-
-    this.logger.log(
-      `completed job=${job.id} status=${result.response.status} duration_ms=${result.turnLog.durationMs}`,
-    );
-
-    return result;
+    try {
+      const result = await withTimeout(this.replyService.handle(job.data), JOB_TIMEOUT_MS);
+      this.logger.log(
+        `completed job=${job.id} status=${result.response.status} duration_ms=${result.turnLog.durationMs}`,
+      );
+      return result;
+    } catch (e) {
+      const err = e as Error;
+      this.logger.error(
+        `job failed job=${job.id} business_id=${job.data.business_id} conversation_id=${job.data.conversation_id} attempt=${job.attemptsMade}: ${err.message}`,
+        err.stack,
+      );
+      throw e;
+    }
   }
 }
 

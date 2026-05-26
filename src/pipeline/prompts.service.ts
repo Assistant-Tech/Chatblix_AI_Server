@@ -8,12 +8,6 @@ interface CachedPrompts {
   validator: string;
 }
 
-/**
- * Loads the legacy stage instruction markdown files. These still contain
- * Nepal-specific persona / tone content — Task 2.2a will split that out
- * into BusinessProfile fields. Until then we just substitute the business
- * name and ship the rest verbatim.
- */
 @Injectable()
 export class PromptsService implements OnModuleInit {
   private readonly logger = new Logger(PromptsService.name);
