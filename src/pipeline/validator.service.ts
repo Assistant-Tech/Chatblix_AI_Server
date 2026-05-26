@@ -87,7 +87,10 @@ export class ValidatorService {
         { stage: 'validator', business_id: input.ctx.business_id, trace_id: input.ctx.trace_id },
       );
     } catch (e) {
-      const err = e as { kind?: string };
+      const err = e as { kind?: string; message?: string };
+      this.logger.error(
+        `validator LLM failed business_id=${input.ctx.business_id} trace_id=${input.ctx.trace_id ?? '-'} kind=${err?.kind ?? 'unknown'}: ${(e as Error).message}`,
+      );
       if (err?.kind === 'timeout') this.metrics.bump('validator_timeout');
       else this.metrics.bump('validator_api_error');
       this.metrics.bump('validator_soft_pass_on_error');
