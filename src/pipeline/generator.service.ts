@@ -82,7 +82,10 @@ export class GeneratorService {
         );
       }
     } catch (e) {
-      const err = e as { kind?: string };
+      const err = e as { kind?: string; message?: string };
+      this.logger.error(
+        `generator stream failed model=${model} business_id=${ctx.business_id} trace_id=${ctx.trace_id ?? '-'} retry=${isRetry} kind=${err?.kind ?? 'unknown'}: ${(e as Error).message}`,
+      );
       if (err?.kind === 'timeout') this.metrics.bump('generator_timeout');
       else this.metrics.bump('generator_api_error');
       throw e;

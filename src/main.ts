@@ -1,3 +1,4 @@
+import 'source-map-support/register';
 import 'reflect-metadata';
 
 process.on('unhandledRejection', (reason) => {
@@ -18,7 +19,12 @@ import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: false,
+    logger: process.env.NODE_ENV === 'production'
+      ? ['error', 'warn', 'log']
+      : ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
   app.setGlobalPrefix('ai/v1');
 
   app.useGlobalPipes(

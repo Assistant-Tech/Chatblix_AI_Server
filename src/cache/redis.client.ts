@@ -16,8 +16,8 @@ export class RedisClient implements OnModuleInit, OnModuleDestroy {
       enableReadyCheck: true,
     });
 
-    this.client.on('error', (err) => {
-      this.logger.error(`Redis error: ${err.message}`);
+    this.client.on('error', (err: Error) => {
+      this.logger.error(`Redis error: ${err.message}`, err.stack);
     });
 
     await this.client.connect();

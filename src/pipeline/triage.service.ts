@@ -65,7 +65,8 @@ export class TriageService {
         { stage: 'triage', business_id },
       );
       return extractJsonObject(repaired.text);
-    } catch {
+    } catch (e) {
+      this.logger.warn(`triage JSON repair failed business_id=${business_id}: ${(e as Error).message}`);
       return null;
     }
   }

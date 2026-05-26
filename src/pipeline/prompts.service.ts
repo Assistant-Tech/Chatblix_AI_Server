@@ -20,7 +20,8 @@ export class PromptsService implements OnModuleInit {
       await this.loadAll();
       this.logger.log(`Pipeline prompts warmed from ${this.PROMPT_DIR}`);
     } catch (e) {
-      this.logger.error(`Failed to warm prompts: ${(e as Error).message}`);
+      const err = e as Error;
+      this.logger.error(`Failed to warm prompts from ${this.PROMPT_DIR}: ${err.message}`, err.stack);
       throw e;
     }
   }

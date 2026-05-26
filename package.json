@@ -32,7 +32,8 @@
     "luxon": "^3.7.2",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "source-map-support": "^0.5.21"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.21",
@@ -42,6 +43,7 @@
     "@types/jest": "^30.0.0",
     "@types/luxon": "^3.7.1",
     "@types/node": "^24.0.0",
+    "@types/source-map-support": "^0.5.10",
     "@types/supertest": "^7.2.0",
     "jest": "^30.4.2",
     "supertest": "^7.2.2",
