@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 import { ReplyService } from '../reply/reply.service';
 import type { ReplyRequestDto } from '../common/types/reply.dto';
 import type { AiReplyJobResult } from '../common/types/turn-log.types';
@@ -33,6 +33,14 @@ export class AiReplyWorker extends WorkerHost {
       return result;
     } catch (e) {
       const err = e as Error;
+      // NotFoundException means the BusinessProfile doesn't exist — retrying won't help.
+      // Mark as unrecoverable so BullMQ skips remaining attempts and fails immediately.
+      if (e instanceof NotFoundException) {
+        this.logger.warn(
+          `profile not found job=${job.id} business_id=${job.data.business_id} — marking unrecoverable`,
+        );
+        throw new UnrecoverableError('profile_not_found');
+      }
       this.logger.error(
         `job failed job=${job.id} business_id=${job.data.business_id} conversation_id=${job.data.conversation_id} attempt=${job.attemptsMade}: ${err.message}`,
         err.stack,
