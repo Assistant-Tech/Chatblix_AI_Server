@@ -1,4 +1,15 @@
 import 'reflect-metadata';
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err: Error) => {
+  console.error('[uncaughtException]', err.message, err.stack);
+  process.exit(1);
+});
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
