@@ -66,6 +66,9 @@ export class ValidatorService {
     try {
       system = await this.prompts.getValidatorPrompt();
     } catch (e) {
+      this.logger.error(
+        `validator prompt load failed business_id=${input.ctx.business_id} trace_id=${input.ctx.trace_id ?? '-'}: ${(e as Error).message}`,
+      );
       this.metrics.bump('validator_soft_pass_on_error');
       return { verdict: this.softPass(`prompt_load_failed:${(e as Error).message}`), tokensIn: null, tokensOut: null };
     }
