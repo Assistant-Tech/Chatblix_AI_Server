@@ -39,32 +39,41 @@ export class ReplyService {
   async handle(req: ReplyRequestDto): Promise<AiReplyJobResult> {
     const start = Date.now();
 
-    const ctx = await this.contextLoader.load({
-      business_id: req.business_id,
-      history: req.history,
-      contact_id: req.contact_id,
-      channel: req.channel,
-      trace_id: req.options?.trace_id,
-    });
+    try {
+      const ctx = await this.contextLoader.load({
+        business_id: req.business_id,
+        history: req.history,
+        contact_id: req.contact_id,
+        channel: req.channel,
+        trace_id: req.options?.trace_id,
+      });
 
-    if (!this.hours.isWithinHours(ctx.profile)) {
-      const latency_ms = Date.now() - start;
-      const response: ReplyResponseOutsideHours = {
-        status: 'outside_hours',
-        reply: this.hours.holidayMessage(ctx.profile),
-        metadata: {
-          latency_ms,
-          trace_id: req.options?.trace_id,
-        },
-      };
-      return {
-        response,
-        turnLog: buildOutsideHoursTurnLog(response, latency_ms, req.options?.trace_id),
-      };
+      if (!this.hours.isWithinHours(ctx.profile)) {
+        const latency_ms = Date.now() - start;
+        const response: ReplyResponseOutsideHours = {
+          status: 'outside_hours',
+          reply: this.hours.holidayMessage(ctx.profile),
+          metadata: {
+            latency_ms,
+            trace_id: req.options?.trace_id,
+          },
+        };
+        return {
+          response,
+          turnLog: buildOutsideHoursTurnLog(response, latency_ms, req.options?.trace_id),
+        };
+      }
+
+      const collected = await this.runPipeline(req, ctx);
+      return this.buildResult(req, ctx, collected, start);
+    } catch (e) {
+      const err = e as Error;
+      this.logger.error(
+        `handle failed business_id=${req.business_id} conversation_id=${req.conversation_id} trace_id=${req.options?.trace_id ?? '-'}: ${err.message}`,
+        err.stack,
+      );
+      throw e;
     }
-
-    const collected = await this.runPipeline(req, ctx);
-    return this.buildResult(req, ctx, collected, start);
   }
 
   // ───────── internals ─────────
