@@ -27,13 +27,26 @@ export class BusinessProfileService {
    * Throws NotFoundException if the profile doesn't exist or AI is disabled.
    */
   async get(id: string): Promise<BusinessProfileDto> {
-    const cached = await this.profileCache.get<BusinessProfileDto>(id);
+    let cached: BusinessProfileDto | null = null;
+    try {
+      cached = await this.profileCache.get<BusinessProfileDto>(id);
+    } catch (e) {
+      this.logger.warn(
+        `profile cache read error business_id=${id}: ${(e as Error).message} — falling back to main-backend`,
+      );
+    }
     if (cached) return cached;
 
     this.logger.log(`profile cache miss business_id=${id} — fetching from main-backend`);
     const profile = await this.mainBackendClient.getProfile(id);
 
-    await this.profileCache.set(id, profile);
+    try {
+      await this.profileCache.set(id, profile);
+    } catch (e) {
+      this.logger.warn(
+        `profile cache write error business_id=${id}: ${(e as Error).message} — continuing without cache`,
+      );
+    }
     return profile;
   }
 
