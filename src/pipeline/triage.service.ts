@@ -107,8 +107,11 @@ export class TriageService {
         { stage: 'triage', business_id: ctx.business_id, trace_id: ctx.trace_id },
       );
     } catch (e) {
+      const err = e as { kind?: string; message?: string };
+      this.logger.error(
+        `triage LLM failed business_id=${ctx.business_id} trace_id=${ctx.trace_id ?? '-'} kind=${err?.kind ?? 'unknown'}: ${(e as Error).message}`,
+      );
       this.metrics.bump('triage_synthesized_fallback');
-      const err = e as { kind?: string };
       return {
         triage: synthesizeFallbackTriage({
           priorAssistantLang,
