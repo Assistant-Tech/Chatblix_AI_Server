@@ -78,6 +78,9 @@ export class TriageService {
     try {
       system = await this.prompts.getTriagePrompt(ctx.profile.name);
     } catch (e) {
+      this.logger.error(
+        `triage prompt load failed business_id=${ctx.business_id} trace_id=${ctx.trace_id ?? '-'}: ${(e as Error).message}`,
+      );
       this.metrics.bump('triage_synthesized_fallback');
       return {
         triage: synthesizeFallbackTriage({
