@@ -8,6 +8,7 @@ import { PipelineModule } from './pipeline/pipeline.module';
 import { ReplyModule } from './reply/reply.module';
 import { WorkerModule } from './worker/worker.module';
 import { HealthModule } from './health/health.module';
+import { SandboxModule } from './sandbox/sandbox.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 @Module({
@@ -20,6 +21,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     ReplyModule,
     WorkerModule,
     HealthModule,
+    SandboxModule,
   ],
   providers: [
     {

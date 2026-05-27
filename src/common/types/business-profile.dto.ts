@@ -178,6 +178,18 @@ export class OfferDto {
   valid_until?: string;
 }
 
+export class CorrectionDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  question!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  corrected!: string;
+}
+
 export class BusinessProfileDto {
   @IsString()
   @MinLength(1)
@@ -244,4 +256,10 @@ export class BusinessProfileDto {
   @Type(() => OfferDto)
   current_offers?: OfferDto[];
 
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => CorrectionDto)
+  corrections?: CorrectionDto[];
 }

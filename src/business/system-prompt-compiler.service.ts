@@ -31,6 +31,7 @@ export class SystemPromptCompilerService {
       renderEscalation(profile),
       renderClosingFlow(profile),
       renderConcernTriggers(profile),
+      renderCorrections(profile),
     ];
     return sections.filter((s) => s.length > 0).join('\n\n');
   }
@@ -277,6 +278,23 @@ function renderConcernTriggers(profile: BusinessProfileDto): string {
     : `Route to concern when the customer raises a problem or need related to a ${type} product or service.`;
 
   return ['## CONCERN TRIGGERS', body].join('\n');
+}
+
+function renderCorrections(profile: BusinessProfileDto): string {
+  const corrections = profile.corrections ?? [];
+  if (corrections.length === 0) return '';
+  const lines: string[] = [
+    '## TEACHING CORRECTIONS (learn from these — do not quote verbatim, generalise the style and approach)',
+    'The business owner has edited the following replies to show how they want the AI to respond.',
+    'Study the pattern: tone, format, language mix, detail level, follow-up questions used.',
+    '',
+  ];
+  for (const c of corrections) {
+    lines.push(`Customer: ${c.question}`);
+    lines.push(`Ideal reply: ${c.corrected}`);
+    lines.push('');
+  }
+  return lines.join('\n').trimEnd();
 }
 
 function renderEscalation(profile: BusinessProfileDto): string {
