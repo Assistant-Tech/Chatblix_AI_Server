@@ -242,6 +242,14 @@ export class OpenRouterClient {
           }
         }
       }
+    } catch (e) {
+      // AbortError thrown by reader.read() when the AbortController fires mid-stream.
+      // Wrap it the same way as the pre-connect abort so callers see a consistent timeout error.
+      const err = e as { name?: string; message?: string };
+      if (err?.name === 'AbortError') {
+        throw new OpenRouterError(`OpenRouter stream timed out after ${timeoutMs}ms`, 'timeout');
+      }
+      throw new OpenRouterError(`OpenRouter stream failed during read: ${err?.message || String(e)}`, 'api_error');
     } finally {
       clearTimeout(timer);
       try {
