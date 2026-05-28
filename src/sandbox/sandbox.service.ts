@@ -47,7 +47,7 @@ export class SandboxService {
       customerContext: buildCustomerContext(ctx.history),
       priorAssistantLang: inferPriorAssistantLang(ctx.history),
       priorAgentQuestion: inferPriorAgentQuestion(ctx.history),
-      stalledCountIncoming: computeStalledCount(ctx.history),
+      stalledCountIncoming: 0,
     };
 
     let typingEmitted = false;
@@ -101,21 +101,8 @@ export class SandboxService {
         latency_ms,
       });
     } else {
-      const shipped = done?.shipped ?? '';
-      const lastAttempt = done?.attempts?.[done.attempts.length - 1];
-      const validatorPass = lastAttempt?.verdict?.pass === true;
-
-      if (done?.outcome === 'ship_with_violations' && !validatorPass) {
-        sse(res, 'done', {
-          status: 'escalate',
-          reason: 'validator_exhausted',
-          handoff_message: dto.profile.escalation?.handoff_message ?? '',
-          latency_ms,
-        });
-      } else {
-        const parsed = parseAgentOutput(shipped, dto.message.content);
-        sse(res, 'done', { status: 'replied', reply: parsed.reply, latency_ms });
-      }
+      const parsed = parseAgentOutput(done?.shipped ?? '', dto.message.content);
+      sse(res, 'done', { status: 'replied', reply: parsed.reply, latency_ms });
     }
 
     res.end();
@@ -171,15 +158,6 @@ function inferPriorAgentQuestion(history: IncomingHistoryMessage[]): string | nu
     return null;
   }
   return null;
-}
-
-function computeStalledCount(history: IncomingHistoryMessage[]): number {
-  let count = 0;
-  for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].role === 'assistant') count++;
-    else break;
-  }
-  return count;
 }
 
 function buildCustomerContext(history: IncomingHistoryMessage[]): Record<string, unknown> {
