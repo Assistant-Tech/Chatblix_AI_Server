@@ -39,6 +39,16 @@ export class ToneDto {
   @MaxLength(100)
   persona_name!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  persona_desc?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  closing_statement?: string;
+
   @IsArray()
   @ArrayMaxSize(50)
   @IsString({ each: true })
