@@ -105,6 +105,9 @@ function renderPersona(profile: BusinessProfileDto): string {
     `Style: ${tone.style}`,
     `You are: ${tone.persona_name}`,
   ];
+  if (tone.persona_desc?.trim()) {
+    lines.push('', 'Custom instructions:', tone.persona_desc.trim());
+  }
   if (tone.do.length > 0) {
     lines.push('', 'Always:');
     for (const item of tone.do) {
@@ -116,6 +119,9 @@ function renderPersona(profile: BusinessProfileDto): string {
     for (const item of tone.dont) {
       lines.push(`- ${item}`);
     }
+  }
+  if (tone.closing_statement?.trim()) {
+    lines.push('', `Closing line: ${tone.closing_statement.trim()}`);
   }
   return lines.join('\n');
 }
