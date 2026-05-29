@@ -192,6 +192,11 @@ export class PipelineOrchestratorService {
           }
         }
 
+        // Strip markdown code fences that some models wrap around the output,
+        // then collapse any duplicate <reply> prefix inserted during streaming.
+        candidate = candidate.replace(/^```[^\n]*\n?/, '').replace(/\n?```\s*$/, '').trim();
+        candidate = candidate.replace(/^<reply>\s*<reply>/i, '<reply>');
+
         if (!prefixDecided && candidate && !/^<reply>/i.test(candidate)) {
           candidate = '<reply>' + candidate;
         }
