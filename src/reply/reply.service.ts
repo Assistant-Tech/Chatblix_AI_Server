@@ -160,12 +160,15 @@ export class ReplyService {
       return { response, turnLog: { ...baseTurnLog, status: 'escalate' } };
     }
 
-    if (done?.outcome === 'ship_with_violations' && !validatorPass) {
-      const handoff = ctx.profile.escalation?.handoff_message ?? parsed.reply ?? '';
-      const response: ReplyResponseEscalate = {
-        status: 'escalate',
-        reason: 'validator_exhausted',
-        suggested_handoff_message: handoff,
+    // ship_with_violations: validator exhausted retries but the orchestrator
+    // already picked the best attempt via pickBest(). Ship it — the parsed
+    // reply text is clean even if the raw candidate had format violations.
+    // Only true semantic escalations (triage_handoff, keyword_match) should
+    // pause the conversation; validator format failures should not.
+    if (done?.outcome === 'ship_with_violations') {
+      const response: ReplyResponseReplied = {
+        status: 'replied',
+        reply: parsed.reply,
         metadata: {
           triage: triageSummary,
           attempts: done.attempts.length,
@@ -175,7 +178,7 @@ export class ReplyService {
           trace_id: req.options?.trace_id,
         },
       };
-      return { response, turnLog: { ...baseTurnLog, status: 'escalate' } };
+      return { response, turnLog: { ...baseTurnLog, status: 'replied' } };
     }
 
     const response: ReplyResponseReplied = {

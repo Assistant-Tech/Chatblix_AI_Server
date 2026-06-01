@@ -290,9 +290,9 @@ function renderCorrections(profile: BusinessProfileDto): string {
   const corrections = profile.corrections ?? [];
   if (corrections.length === 0) return '';
   const lines: string[] = [
-    '## TEACHING CORRECTIONS (learn from these — do not quote verbatim, generalise the style and approach)',
-    'The business owner has edited the following replies to show how they want the AI to respond.',
-    'Study the pattern: tone, format, language mix, detail level, follow-up questions used.',
+    '## TEACHING CORRECTIONS',
+    'The business owner corrected these replies. Match their exact tone, vocabulary, language mix, and phrasing as closely as possible.',
+    'When the current message is similar to a Customer example below, your reply MUST follow the Ideal reply pattern closely — same words, same structure, same level of detail.',
     '',
   ];
   for (const c of corrections) {

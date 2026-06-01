@@ -7,6 +7,20 @@ import type {
 
 export type EscalationReason = 'keyword_match' | 'triage_handoff';
 
+// Only these intents trigger a human handoff when triage sets handoff_required.
+// Greetings, questions, and general discovery are handled by the generator —
+// do NOT escalate them even if the triage model says handoff_required.
+const HUMAN_REQUIRED_INTENTS = new Set([
+  'complaint',
+  'modify_order',
+  'invoice_request',
+  'reasking',
+  'abusive',
+  'medical_mention',
+  'bulk_inquiry',
+  'cancellation_signal',
+]);
+
 export interface EscalationCheckResult {
   escalate: boolean;
   reason?: EscalationReason;
@@ -36,7 +50,7 @@ export class EscalationRulesService {
   ): EscalationCheckResult {
     void history; // currently unused; kept for future sentiment-over-time rules
 
-    if (triage?.handoff_required) {
+    if (triage?.handoff_required && HUMAN_REQUIRED_INTENTS.has(triage.intent_path as string)) {
       return { escalate: true, reason: 'triage_handoff' };
     }
 
