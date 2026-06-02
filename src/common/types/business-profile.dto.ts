@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsIn,
   IsISO8601,
   IsNumber,
@@ -276,5 +277,9 @@ export class BusinessProfileDto {
   @ValidateNested({ each: true })
   @Type(() => CorrectionDto)
   corrections?: CorrectionDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  emoji_allowed?: boolean;
 
 }

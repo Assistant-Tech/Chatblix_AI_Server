@@ -105,6 +105,11 @@ function renderPersona(profile: BusinessProfileDto): string {
     `Style: ${tone.style}`,
     `You are: ${tone.persona_name}`,
   ];
+  if (profile.emoji_allowed === false) {
+    lines.push('Emoji: not allowed — never use emoji anywhere in your replies.');
+  } else if (profile.emoji_allowed === true) {
+    lines.push('Emoji: allowed.');
+  }
   if (tone.do.length > 0) {
     lines.push('', 'Always:');
     for (const item of tone.do) {
