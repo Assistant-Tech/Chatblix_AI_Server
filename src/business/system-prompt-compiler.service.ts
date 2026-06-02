@@ -31,6 +31,7 @@ export class SystemPromptCompilerService {
       renderEscalation(profile),
       renderClosingFlow(profile),
       renderConcernTriggers(profile),
+      renderCorrections(profile),
     ];
     return sections.filter((s) => s.length > 0).join('\n\n');
   }
@@ -292,5 +293,15 @@ function renderEscalation(profile: BusinessProfileDto): string {
     lines.push(`Escalate on sentiment: ${escalation.sentiment_threshold}`);
   }
   lines.push(`Handoff line: ${escalation.handoff_message}`);
+  return lines.join('\n');
+}
+
+function renderCorrections(profile: BusinessProfileDto): string {
+  if (!profile.corrections?.length) return '';
+  const lines = ['## CORRECTIONS', ''];
+  for (const { wrong, right, context } of profile.corrections) {
+    const note = context ? ` (${context})` : '';
+    lines.push(`- Wrong: "${wrong}" → Right: "${right}"${note}`);
+  }
   return lines.join('\n');
 }

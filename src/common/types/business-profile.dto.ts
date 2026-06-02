@@ -131,6 +131,23 @@ export class EscalationDto {
   sentiment_threshold?: 'negative' | 'very_negative';
 }
 
+export class CorrectionDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(300)
+  wrong!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(300)
+  right!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  context?: string;
+}
+
 export class ProductDto {
   @IsString()
   @MinLength(1)
@@ -252,5 +269,12 @@ export class BusinessProfileDto {
   @ValidateNested({ each: true })
   @Type(() => OfferDto)
   current_offers?: OfferDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CorrectionDto)
+  corrections?: CorrectionDto[];
 
 }
