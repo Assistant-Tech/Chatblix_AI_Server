@@ -281,9 +281,16 @@ function renderConcernTriggers(profile: BusinessProfileDto): string {
 
 function renderEscalation(profile: BusinessProfileDto): string {
   const { escalation } = profile;
-  return [
-    '## ESCALATION',
-    `Trigger keywords: ${escalation.triggers.join(', ')}`,
-    `Handoff line: ${escalation.handoff_message}`,
-  ].join('\n');
+  const lines = ['## ESCALATION'];
+  if (escalation.triggers.length > 0) {
+    lines.push(`Trigger keywords: ${escalation.triggers.join(', ')}`);
+  }
+  if (escalation.max_turns !== undefined) {
+    lines.push(`Max AI turns before handoff: ${escalation.max_turns}`);
+  }
+  if (escalation.sentiment_threshold) {
+    lines.push(`Escalate on sentiment: ${escalation.sentiment_threshold}`);
+  }
+  lines.push(`Handoff line: ${escalation.handoff_message}`);
+  return lines.join('\n');
 }

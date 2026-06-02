@@ -21,6 +21,7 @@ export interface Triage {
   named_product: string | null;
   extracted_data_delta: Record<string, string | null>;
   closing_state: TriageClosingState;
+  sentiment?: string;
   buying_signal: boolean;
   explicit_price_ask?: boolean;
   process_question_topic?: string | null;

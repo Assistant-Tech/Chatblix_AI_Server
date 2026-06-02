@@ -5,7 +5,7 @@ import type {
   Triage,
 } from '../common/types/pipeline.types';
 
-export type EscalationReason = 'keyword_match' | 'triage_handoff';
+export type EscalationReason = 'keyword_match' | 'triage_handoff' | 'max_turns_exceeded' | 'negative_sentiment';
 
 export interface EscalationCheckResult {
   escalate: boolean;
@@ -34,14 +34,31 @@ export class EscalationRulesService {
     profile: BusinessProfileDto,
     triage?: Triage | null,
   ): EscalationCheckResult {
-    void history; // currently unused; kept for future sentiment-over-time rules
-
     if (triage?.handoff_required) {
       return { escalate: true, reason: 'triage_handoff' };
     }
 
-    const triggers = profile.escalation?.triggers ?? [];
-    if (!message || triggers.length === 0) {
+    const { max_turns, sentiment_threshold, triggers } = profile.escalation ?? {};
+
+    if (max_turns !== undefined) {
+      const aiTurns = history.filter((h) => h.role === 'assistant').length;
+      if (aiTurns >= max_turns) {
+        return { escalate: true, reason: 'max_turns_exceeded' };
+      }
+    }
+
+    if (sentiment_threshold && triage?.sentiment) {
+      const s = triage.sentiment;
+      const shouldEscalate =
+        sentiment_threshold === 'very_negative'
+          ? s === 'very_negative'
+          : s === 'negative' || s === 'very_negative';
+      if (shouldEscalate) {
+        return { escalate: true, reason: 'negative_sentiment' };
+      }
+    }
+
+    if (!message || !triggers?.length) {
       return { escalate: false };
     }
 

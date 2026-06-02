@@ -120,6 +120,15 @@ export class EscalationDto {
   @IsString()
   @MaxLength(500)
   handoff_message!: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  max_turns?: number;
+
+  @IsOptional()
+  @IsIn(['negative', 'very_negative'])
+  sentiment_threshold?: 'negative' | 'very_negative';
 }
 
 export class ProductDto {
