@@ -13,14 +13,16 @@ those belong to the main backend.
 
 | # | Doc | Read it when... |
 |---|---|---|
-| 0 | [PIPELINE_README.md](./PIPELINE_README.md) | You want a visual walkthrough of how the Triage → Generator → Validator pipeline works. **Start here if you're new.** |
-| 1 | [AI_BACKEND_ARCHITECTURE.md](./AI_BACKEND_ARCHITECTURE.md) | You want to understand the service end-to-end. Start here. |
-| 2 | [KB_MANAGEMENT.md](./KB_MANAGEMENT.md) | You're working on profile sync, the system-prompt compiler, or the prompt cache. |
-| 3 | [CONVERSATION_HISTORY.md](./CONVERSATION_HISTORY.md) | You're confused how recent conversation turns reach the LLM (spoiler: in the request body, not from a database). |
-| 4 | [COST_AND_BILLING.md](./COST_AND_BILLING.md) | You're planning capacity, setting SaaS prices, or tracking token spend. |
+| 0 | [Architecture.md](./Architecture.md) | You want to understand this service's reply pipeline end-to-end. **Start here.** |
+| 1 | [AI_EVOLUTION_ROADMAP.md](./AI_EVOLUTION_ROADMAP.md) | You want where this is headed: prompted pipeline → agentic → RAG. |
+| 2 | [TENANT_ANALYTICS_AGENT.md](./TENANT_ANALYTICS_AGENT.md) | You're working on the tenant analytics agent. |
 
-These are the **authoritative** design for this service. If anything
-else contradicts them, these win.
+The **cross-repo authoritative design** lives in main-backend's docs — if anything
+here contradicts them, those win:
+
+- [`main-backend/docs/AI_SYSTEM.md`](../../main-backend/docs/AI_SYSTEM.md) — canonical design & implementation reference (profile sync, prompt compile, integration contract)
+- [`main-backend/docs/REDIS_AND_SCALING.md`](../../main-backend/docs/REDIS_AND_SCALING.md) — Redis topology (single shared Redis: main writes `profile:{id}`, ai-backend reads it)
+- [`main-backend/docs/BUSINESS_PROFILE_API.md`](../../main-backend/docs/BUSINESS_PROFILE_API.md) — the `BusinessProfile` shape, every field
 
 ---
 
@@ -60,7 +62,7 @@ src/
 └── health/       GET /ai/v1/health
 ```
 
-Detail of each module is in `AI_BACKEND_ARCHITECTURE.md §8`.
+Detail of the pipeline stages is in [`Architecture.md`](./Architecture.md).
 
 ---
 
@@ -82,19 +84,9 @@ they belong to the main backend.
 
 | You want to know... | Go to |
 |---|---|
-| What endpoints this service exposes | `AI_BACKEND_ARCHITECTURE.md §4` |
-| The request/response JSON shapes | `AI_BACKEND_ARCHITECTURE.md §5` |
-| A traced walkthrough of one real customer message | `AI_BACKEND_ARCHITECTURE.md §6` |
-| The full data model (only 2 tables) | `AI_BACKEND_ARCHITECTURE.md §7` |
-| Implementation order | `AI_BACKEND_ARCHITECTURE.md §14` |
-| How tenant KB flows from edit → LLM context | `KB_MANAGEMENT.md §3` |
-| How recent conversation history reaches the LLM | `CONVERSATION_HISTORY.md §1` |
-| The exact LLM API call shape (system + history + new message) | `CONVERSATION_HISTORY.md §5` |
-| The `BusinessProfile` shape (every field annotated) | `KB_MANAGEMENT.md §4` |
-| Migration from current `kb/*.json` files | `KB_MANAGEMENT.md §11` |
-| Per-message LLM cost (with and without caching) | `COST_AND_BILLING.md §4` |
-| Per-conversation cost & token usage (1–50 turns) | `COST_AND_BILLING.md §4.7` |
-| Per-business monthly cost projections | `COST_AND_BILLING.md §5` |
-| SaaS pricing tiers + margin analysis | `COST_AND_BILLING.md §11` |
-| Cost optimization levers (in priority order) | `COST_AND_BILLING.md §12` |
-| Token-cost formulas you can plug into code | `COST_AND_BILLING.md §15` |
+| This service's reply pipeline, end-to-end | [`Architecture.md`](./Architecture.md) |
+| The queue job + HTTP fallback contract with main-backend | [`../../main-backend/docs/AI_SYSTEM.md`](../../main-backend/docs/AI_SYSTEM.md) |
+| The `BusinessProfile` shape (every field) | [`../../main-backend/docs/BUSINESS_PROFILE_API.md`](../../main-backend/docs/BUSINESS_PROFILE_API.md) |
+| Redis topology (who writes/reads `profile:{id}` / `prompt:{id}`) | [`../../main-backend/docs/REDIS_AND_SCALING.md`](../../main-backend/docs/REDIS_AND_SCALING.md) |
+| Where the architecture is headed (agentic, RAG) | [`AI_EVOLUTION_ROADMAP.md`](./AI_EVOLUTION_ROADMAP.md) |
+| The tenant analytics agent | [`TENANT_ANALYTICS_AGENT.md`](./TENANT_ANALYTICS_AGENT.md) |
