@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsIn,
   IsISO8601,
   IsNumber,
@@ -130,6 +131,32 @@ export class EscalationDto {
   @IsString()
   @MaxLength(500)
   handoff_message!: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  max_turns?: number;
+
+  @IsOptional()
+  @IsIn(['negative', 'very_negative'])
+  sentiment_threshold?: 'negative' | 'very_negative';
+}
+
+export class CorrectionDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(300)
+  wrong!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(300)
+  right!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  context?: string;
 }
 
 export class ProductDto {
@@ -268,8 +295,20 @@ export class BusinessProfileDto {
 
   @IsOptional()
   @IsArray()
+<<<<<<< HEAD
   @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => CorrectionDto)
   corrections?: CorrectionDto[];
+=======
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => CorrectionDto)
+  corrections?: CorrectionDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  emoji_allowed?: boolean;
+
+>>>>>>> main
 }

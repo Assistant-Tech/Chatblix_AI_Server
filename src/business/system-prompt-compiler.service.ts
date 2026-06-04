@@ -105,8 +105,15 @@ function renderPersona(profile: BusinessProfileDto): string {
     `Style: ${tone.style}`,
     `You are: ${tone.persona_name}`,
   ];
+<<<<<<< HEAD
   if (tone.persona_desc?.trim()) {
     lines.push('', 'Custom instructions:', tone.persona_desc.trim());
+=======
+  if (profile.emoji_allowed === false) {
+    lines.push('Emoji: not allowed — never use emoji anywhere in your replies.');
+  } else if (profile.emoji_allowed === true) {
+    lines.push('Emoji: allowed.');
+>>>>>>> main
   }
   if (tone.do.length > 0) {
     lines.push('', 'Always:');
@@ -305,9 +312,26 @@ function renderCorrections(profile: BusinessProfileDto): string {
 
 function renderEscalation(profile: BusinessProfileDto): string {
   const { escalation } = profile;
-  return [
-    '## ESCALATION',
-    `Trigger keywords: ${escalation.triggers.join(', ')}`,
-    `Handoff line: ${escalation.handoff_message}`,
-  ].join('\n');
+  const lines = ['## ESCALATION'];
+  if (escalation.triggers.length > 0) {
+    lines.push(`Trigger keywords: ${escalation.triggers.join(', ')}`);
+  }
+  if (escalation.max_turns !== undefined) {
+    lines.push(`Max AI turns before handoff: ${escalation.max_turns}`);
+  }
+  if (escalation.sentiment_threshold) {
+    lines.push(`Escalate on sentiment: ${escalation.sentiment_threshold}`);
+  }
+  lines.push(`Handoff line: ${escalation.handoff_message}`);
+  return lines.join('\n');
+}
+
+function renderCorrections(profile: BusinessProfileDto): string {
+  if (!profile.corrections?.length) return '';
+  const lines = ['## CORRECTIONS', ''];
+  for (const { wrong, right, context } of profile.corrections) {
+    const note = context ? ` (${context})` : '';
+    lines.push(`- Wrong: "${wrong}" → Right: "${right}"${note}`);
+  }
+  return lines.join('\n');
 }

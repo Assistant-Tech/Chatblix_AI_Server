@@ -94,6 +94,10 @@ export class TriageService {
       };
     }
 
+    if (ctx.systemPrompt) {
+      system = `${ctx.systemPrompt}\n\n${system}`;
+    }
+
     const user = this.buildUserPayload(input);
 
     let response: { text: string; usage: ChatJsonUsage | null };

@@ -73,6 +73,10 @@ export class ValidatorService {
       return { verdict: this.softPass(`prompt_load_failed:${(e as Error).message}`), tokensIn: null, tokensOut: null };
     }
 
+    if (input.ctx.systemPrompt) {
+      system = `${input.ctx.systemPrompt}\n\n${system}`;
+    }
+
     const user = this.buildUserPayload(input);
 
     let response: { text: string; usage: ChatJsonUsage | null };
