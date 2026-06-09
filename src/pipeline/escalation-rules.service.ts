@@ -48,13 +48,7 @@ export class EscalationRulesService {
     profile: BusinessProfileDto,
     triage?: Triage | null,
   ): EscalationCheckResult {
-<<<<<<< HEAD
-    void history; // currently unused; kept for future sentiment-over-time rules
-
-    if (triage?.handoff_required && HUMAN_REQUIRED_INTENTS.has(triage.intent_path as string)) {
-=======
     if (triage?.handoff_required) {
->>>>>>> main
       return { escalate: true, reason: 'triage_handoff' };
     }
 

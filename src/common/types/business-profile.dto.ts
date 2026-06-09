@@ -142,23 +142,6 @@ export class EscalationDto {
   sentiment_threshold?: 'negative' | 'very_negative';
 }
 
-export class CorrectionDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(300)
-  wrong!: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(300)
-  right!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  context?: string;
-}
-
 export class ProductDto {
   @IsString()
   @MinLength(1)
@@ -295,12 +278,6 @@ export class BusinessProfileDto {
 
   @IsOptional()
   @IsArray()
-<<<<<<< HEAD
-  @ArrayMaxSize(100)
-  @ValidateNested({ each: true })
-  @Type(() => CorrectionDto)
-  corrections?: CorrectionDto[];
-=======
   @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => CorrectionDto)
@@ -310,5 +287,4 @@ export class BusinessProfileDto {
   @IsBoolean()
   emoji_allowed?: boolean;
 
->>>>>>> main
 }
