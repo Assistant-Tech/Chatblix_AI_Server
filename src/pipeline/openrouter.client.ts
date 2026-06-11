@@ -68,7 +68,8 @@ export interface OpenRouterMessage {
 
 export type ChatStreamEvent =
   | { type: 'content'; text: string }
-  | { type: 'tool_call'; id: string; name: string; arguments: string };
+  | { type: 'tool_call'; id: string; name: string; arguments: string }
+  | { type: 'usage'; promptTokens: number | null; completionTokens: number | null };
 
 @Injectable()
 export class OpenRouterClient {
@@ -200,6 +201,9 @@ export class OpenRouterClient {
       temperature,
       max_tokens: maxTokens,
       stream: true,
+      // Ask the provider to send a final usage frame so callers can account for
+      // streamed-generation tokens (otherwise streaming reports no usage).
+      stream_options: { include_usage: true },
     };
     if (opts.tools) body.tools = opts.tools;
     if (stopSequences) body.stop = stopSequences;
@@ -235,6 +239,7 @@ export class OpenRouterClient {
     const decoder = new TextDecoder();
     let buf = '';
     let activeToolCall: { id: string; name: string; arguments: string } | null = null;
+    let lastUsage: { promptTokens: number | null; completionTokens: number | null } | null = null;
 
     try {
       while (true) {
@@ -255,12 +260,24 @@ export class OpenRouterClient {
                 yield { type: 'tool_call', ...activeToolCall };
                 activeToolCall = null;
               }
+              if (lastUsage) {
+                yield { type: 'usage', ...lastUsage };
+                lastUsage = null;
+              }
               return;
             }
             continue;
           }
           try {
             const parsed = JSON.parse(data) as any;
+            // Usage arrives in its own trailing frame (choices empty); capture it
+            // and emit once at stream end to avoid double-counting.
+            if (parsed?.usage) {
+              lastUsage = {
+                promptTokens: parsed.usage.prompt_tokens ?? null,
+                completionTokens: parsed.usage.completion_tokens ?? null,
+              };
+            }
             const delta = parsed?.choices?.[0]?.delta;
             if (!delta) continue;
 
@@ -287,6 +304,9 @@ export class OpenRouterClient {
       }
       if (activeToolCall) {
         yield { type: 'tool_call', ...activeToolCall };
+      }
+      if (lastUsage) {
+        yield { type: 'usage', ...lastUsage };
       }
     } catch (e) {
       // AbortError thrown by reader.read() when the AbortController fires mid-stream.

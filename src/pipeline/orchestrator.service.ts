@@ -184,6 +184,7 @@ export class PipelineOrchestratorService {
       try {
         while (true) {
           activeToolCall = false;
+          let pendingToolCall: { id: string; name: string; arguments: string } | null = null;
           for await (const chunk of this.generator.streamGenerator({
             ctx,
             message,
@@ -194,21 +195,17 @@ export class PipelineOrchestratorService {
             disableTools: toolsExhausted,
           })) {
             if (chunk.type === 'tool_call') {
-              const toolResult = await this.toolExecutor.execute(chunk.name, chunk.arguments, ctx.business_id);
-              toolContext.push({
-                role: 'assistant',
-                content: '',
-                tool_calls: [{ id: chunk.id, type: 'function', function: { name: chunk.name, arguments: chunk.arguments } }]
-              });
-              toolContext.push({
-                role: 'tool',
-                content: toolResult,
-                tool_call_id: chunk.id,
-                name: chunk.name
-              });
-              activeToolCall = true;
-              break;
+              // Capture the call but keep draining the stream so the trailing
+              // usage frame is still accounted for before we act on it.
+              pendingToolCall = { id: chunk.id, name: chunk.name, arguments: chunk.arguments };
+            } else if (chunk.type === 'usage') {
+              // Each generator call (including every tool-loop iteration) reports
+              // its own usage; accumulate so tool-using turns are billed in full.
+              accTokensIn += chunk.promptTokens ?? 0;
+              accTokensOut += chunk.completionTokens ?? 0;
             } else if (chunk.type === 'content') {
+              // A tool call is terminal for this pass — ignore any trailing content.
+              if (pendingToolCall) continue;
               candidate += chunk.text;
 
               if (!prefixDecided && candidate.length >= 7) {
@@ -227,6 +224,33 @@ export class PipelineOrchestratorService {
               }
             }
           }
+
+          if (pendingToolCall) {
+            const toolResult = await this.toolExecutor.execute(
+              pendingToolCall.name,
+              pendingToolCall.arguments,
+              ctx.business_id,
+            );
+            toolContext.push({
+              role: 'assistant',
+              content: '',
+              tool_calls: [
+                {
+                  id: pendingToolCall.id,
+                  type: 'function',
+                  function: { name: pendingToolCall.name, arguments: pendingToolCall.arguments },
+                },
+              ],
+            });
+            toolContext.push({
+              role: 'tool',
+              content: toolResult,
+              tool_call_id: pendingToolCall.id,
+              name: pendingToolCall.name,
+            });
+            activeToolCall = true;
+          }
+
           if (!activeToolCall) {
             break;
           }
