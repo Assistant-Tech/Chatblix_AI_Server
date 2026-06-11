@@ -99,6 +99,8 @@ export class PipelineOrchestratorService {
 
     const turnId = randomUUID();
     const tStart = Date.now();
+    // Names of tools executed this turn, for audit/observability in the turn log.
+    const toolsCalled: string[] = [];
     this.metrics.bump('total_turns');
 
     // --- Stage 1: Triage ---
@@ -141,6 +143,7 @@ export class PipelineOrchestratorService {
         duration_ms: Date.now() - tStart,
         tokensIn: accTokensIn || null,
         tokensOut: accTokensOut || null,
+        tools_called: toolsCalled,
       };
       yield { event: '_done_internal', data: done };
       return;
@@ -249,6 +252,17 @@ export class PipelineOrchestratorService {
               name: pendingToolCall.name,
             });
             activeToolCall = true;
+            toolsCalled.push(pendingToolCall.name);
+
+            // The final reply comes from the resumed generation after this tool
+            // result is injected. Discard anything streamed before the tool call
+            // so stray pre-tool content can't leak into (and corrupt) that answer.
+            if (lastEmittedReplyLen > 0) {
+              yield { event: 'regenerate', data: { reason: 'tool_call', attempt: attemptIdx } };
+            }
+            candidate = '';
+            prefixDecided = false;
+            lastEmittedReplyLen = 0;
           }
 
           if (!activeToolCall) {
@@ -391,7 +405,13 @@ export class PipelineOrchestratorService {
       duration_ms: Date.now() - tStart,
       tokensIn: accTokensIn || null,
       tokensOut: accTokensOut || null,
+      tools_called: toolsCalled,
     };
+    if (toolsCalled.length > 0) {
+      this.logger.log(
+        `[pipeline] turn ${turnId} business_id=${ctx.business_id} tools_called=[${toolsCalled.join(',')}]`,
+      );
+    }
     yield { event: '_done_internal', data: done };
   }
 

@@ -140,4 +140,5 @@ export interface DoneInternalData {
   duration_ms: number;
   tokensIn: number | null;
   tokensOut: number | null;
+  tools_called: string[];
 }

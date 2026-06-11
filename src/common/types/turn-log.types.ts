@@ -10,6 +10,7 @@ export interface AiTurnLogData {
   highSeverityViolations: number;
   intentPath: string | null;
   language: string | null;
+  toolsCalled: string[];
   shipped: string;
   tokensIn: number | null;
   tokensOut: number | null;
