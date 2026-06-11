@@ -27,6 +27,11 @@ import type {
 const TONE_RULE_ID = 90;
 const SAFETY_RULE_ID = 91;
 
+// Hard cap on tool-call round-trips within a single generation attempt. Prevents
+// a model that keeps emitting tool calls from looping forever (unbounded LLM
+// spend + latency). Matches the "max 5 iterations" bound in the analytics design.
+const MAX_TOOL_ITERATIONS = 5;
+
 @Injectable()
 export class PipelineOrchestratorService {
   private readonly logger = new Logger(PipelineOrchestratorService.name);
@@ -171,6 +176,10 @@ export class PipelineOrchestratorService {
       let prefixDecided = false;
       let toolContext: OpenRouterMessage[] = [];
       let activeToolCall = false;
+      let toolIterations = 0;
+      // Once the cap is reached we make one final pass with tools withheld so the
+      // model is forced to answer with the data it already gathered.
+      let toolsExhausted = false;
 
       try {
         while (true) {
@@ -182,6 +191,7 @@ export class PipelineOrchestratorService {
             triage,
             feedback,
             toolContext,
+            disableTools: toolsExhausted,
           })) {
             if (chunk.type === 'tool_call') {
               const toolResult = await this.toolExecutor.execute(chunk.name, chunk.arguments, ctx.business_id);
@@ -219,6 +229,27 @@ export class PipelineOrchestratorService {
           }
           if (!activeToolCall) {
             break;
+          }
+
+          toolIterations++;
+          if (toolIterations >= MAX_TOOL_ITERATIONS) {
+            if (toolsExhausted) {
+              // Tools were already withheld on this pass yet the model still tried
+              // to call one — bail out rather than loop forever.
+              this.logger.warn(
+                `[pipeline.generator] tool calls continued after cap business_id=${ctx.business_id}; aborting loop`,
+              );
+              break;
+            }
+            this.logger.warn(
+              `[pipeline.generator] tool-iteration cap (${MAX_TOOL_ITERATIONS}) reached business_id=${ctx.business_id}; forcing a final answer without tools`,
+            );
+            this.metrics.bump('tool_iteration_cap_hit');
+            // Force one clean final pass with tools withheld.
+            toolsExhausted = true;
+            candidate = '';
+            prefixDecided = false;
+            lastEmittedReplyLen = 0;
           }
         }
 

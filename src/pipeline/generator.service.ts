@@ -23,6 +23,9 @@ export interface StreamGeneratorInput {
   feedback: GeneratorFeedback | null;
   customerContext: Record<string, unknown>;
   toolContext?: OpenRouterMessage[];
+  // When true, the tools array is withheld so the model is forced to answer
+  // with the data it already has (used after the tool-iteration cap is hit).
+  disableTools?: boolean;
 }
 
 export type GeneratorEvent = ChatStreamEvent;
@@ -53,7 +56,7 @@ export class GeneratorService {
   }
 
   async *streamGenerator(input: StreamGeneratorInput): AsyncGenerator<GeneratorEvent> {
-    const { ctx, feedback, toolContext } = input;
+    const { ctx, feedback, toolContext, disableTools } = input;
     const model = this.config.generatorModel();
     const isRetry = Boolean(feedback);
     const temperature = isRetry ? 0.4 : 0.7;
@@ -82,7 +85,7 @@ export class GeneratorService {
           maxTokens: 800,
           stopSequences: ['\n\n\n'],
           timeoutMs: this.config.generatorTimeoutMs(),
-          tools: AVAILABLE_TOOLS,
+          tools: disableTools ? undefined : AVAILABLE_TOOLS,
           messages,
           system, // Fallback for clients needing it
           user,   // Fallback
