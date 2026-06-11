@@ -4,6 +4,7 @@ import {
   ChatJsonResult,
   ChatJsonUsage,
   ChatStreamOptions,
+  ChatStreamEvent,
   OpenRouterClient,
   OpenRouterError,
 } from './openrouter.client';
@@ -66,7 +67,7 @@ export class LLMClientService {
    * Retries only happen on connection establishment failure, which we surface
    * by attempting the first iteration eagerly.
    */
-  async *chatStream(opts: ChatStreamOptions, callCtx: CallContext = {}): AsyncGenerator<string> {
+  async *chatStream(opts: ChatStreamOptions, callCtx: CallContext = {}): AsyncGenerator<ChatStreamEvent> {
     const start = Date.now();
     let firstChunkSeen = false;
 

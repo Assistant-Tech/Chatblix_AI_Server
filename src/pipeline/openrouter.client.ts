@@ -19,6 +19,15 @@ export class OpenRouterError extends Error {
   }
 }
 
+export interface OpenRouterTool {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: object;
+  };
+}
+
 export interface ChatJsonOptions {
   model: string;
   system: string;
@@ -28,6 +37,7 @@ export interface ChatJsonOptions {
   stopSequences?: string[];
   responseFormat?: { type: string };
   timeoutMs?: number;
+  tools?: OpenRouterTool[];
 }
 
 export interface ChatJsonUsage {
@@ -43,14 +53,22 @@ export interface ChatJsonResult {
 
 export interface ChatStreamOptions extends ChatJsonOptions {
   prefill?: string;
+  messages?: OpenRouterMessage[]; // Allow overriding user/system with a full conversation
 }
 
-interface OpenRouterMessage {
-  role: 'system' | 'user' | 'assistant';
+export interface OpenRouterMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content:
     | string
     | Array<{ type: string; text: string; cache_control?: { type: string } }>;
+  tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
+  tool_call_id?: string;
+  name?: string;
 }
+
+export type ChatStreamEvent =
+  | { type: 'content'; text: string }
+  | { type: 'tool_call'; id: string; name: string; arguments: string };
 
 @Injectable()
 export class OpenRouterClient {
@@ -111,6 +129,7 @@ export class OpenRouterClient {
       temperature,
       max_tokens: maxTokens,
     };
+    if (opts.tools) body.tools = opts.tools;
     if (stopSequences) body.stop = stopSequences;
     if (responseFormat) body.response_format = responseFormat;
 
@@ -156,7 +175,7 @@ export class OpenRouterClient {
     return { text, raw: json, usage };
   }
 
-  async *chatStream(opts: ChatStreamOptions): AsyncGenerator<string> {
+  async *chatStream(opts: ChatStreamOptions): AsyncGenerator<ChatStreamEvent> {
     const {
       model,
       system,
@@ -166,13 +185,14 @@ export class OpenRouterClient {
       stopSequences,
       timeoutMs = 8000,
       prefill,
+      messages: overrideMessages,
     } = opts;
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const messages: OpenRouterMessage[] = [this.systemMessage(system), this.userMessage(user)];
-    if (prefill) messages.push(this.assistantPrefillMessage(prefill));
+    const messages: OpenRouterMessage[] = overrideMessages || [this.systemMessage(system), this.userMessage(user)];
+    if (!overrideMessages && prefill) messages.push(this.assistantPrefillMessage(prefill));
 
     const body: Record<string, unknown> = {
       model,
@@ -181,6 +201,7 @@ export class OpenRouterClient {
       max_tokens: maxTokens,
       stream: true,
     };
+    if (opts.tools) body.tools = opts.tools;
     if (stopSequences) body.stop = stopSequences;
 
     let response: Response;
@@ -213,6 +234,7 @@ export class OpenRouterClient {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
+    let activeToolCall: { id: string; name: string; arguments: string } | null = null;
 
     try {
       while (true) {
@@ -228,19 +250,43 @@ export class OpenRouterClient {
           if (!rawLine.startsWith('data:')) continue;
           const data = rawLine.slice(5).trim();
           if (!data || data === '[DONE]') {
-            if (data === '[DONE]') return;
+            if (data === '[DONE]') {
+              if (activeToolCall) {
+                yield { type: 'tool_call', ...activeToolCall };
+                activeToolCall = null;
+              }
+              return;
+            }
             continue;
           }
           try {
-            const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
-            const delta = parsed?.choices?.[0]?.delta?.content;
-            if (typeof delta === 'string' && delta.length > 0) {
-              yield delta;
+            const parsed = JSON.parse(data) as any;
+            const delta = parsed?.choices?.[0]?.delta;
+            if (!delta) continue;
+
+            if (typeof delta.content === 'string' && delta.content.length > 0) {
+              yield { type: 'content', text: delta.content };
+            }
+
+            if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
+              for (const tc of delta.tool_calls) {
+                if (tc.id) {
+                  if (activeToolCall) {
+                    yield { type: 'tool_call', ...activeToolCall };
+                  }
+                  activeToolCall = { id: tc.id, name: tc.function?.name || '', arguments: tc.function?.arguments || '' };
+                } else if (activeToolCall && tc.function?.arguments) {
+                  activeToolCall.arguments += tc.function.arguments;
+                }
+              }
             }
           } catch {
             // ignore malformed frames
           }
         }
+      }
+      if (activeToolCall) {
+        yield { type: 'tool_call', ...activeToolCall };
       }
     } catch (e) {
       // AbortError thrown by reader.read() when the AbortController fires mid-stream.

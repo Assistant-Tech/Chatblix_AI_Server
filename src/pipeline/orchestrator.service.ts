@@ -11,6 +11,8 @@ import { EscalationRulesService } from './escalation-rules.service';
 import { MetricsService } from './metrics.service';
 import { severityScore, verdictPasses } from '../common/utils/pipeline/severity';
 import { parsePartialAgentOutput } from '../common/utils/parser';
+import { OpenRouterMessage } from './openrouter.client';
+import { ToolExecutorService } from './tool-executor.service';
 import type {
   DoneInternalData,
   LanguageCode,
@@ -39,6 +41,7 @@ export class PipelineOrchestratorService {
     private readonly safety: SafetyFilterService,
     private readonly escalation: EscalationRulesService,
     private readonly metrics: MetricsService,
+    private readonly toolExecutor: ToolExecutorService,
   ) {}
 
   private pickBest(attempts: PipelineAttempt[]): PipelineAttempt | null {
@@ -166,29 +169,56 @@ export class PipelineOrchestratorService {
 
       let candidate = '';
       let prefixDecided = false;
+      let toolContext: OpenRouterMessage[] = [];
+      let activeToolCall = false;
+
       try {
-        for await (const chunk of this.generator.streamGenerator({
-          ctx,
-          message,
-          customerContext,
-          triage,
-          feedback,
-        })) {
-          candidate += chunk;
+        while (true) {
+          activeToolCall = false;
+          for await (const chunk of this.generator.streamGenerator({
+            ctx,
+            message,
+            customerContext,
+            triage,
+            feedback,
+            toolContext,
+          })) {
+            if (chunk.type === 'tool_call') {
+              const toolResult = await this.toolExecutor.execute(chunk.name, chunk.arguments, ctx.business_id);
+              toolContext.push({
+                role: 'assistant',
+                content: '',
+                tool_calls: [{ id: chunk.id, type: 'function', function: { name: chunk.name, arguments: chunk.arguments } }]
+              });
+              toolContext.push({
+                role: 'tool',
+                content: toolResult,
+                tool_call_id: chunk.id,
+                name: chunk.name
+              });
+              activeToolCall = true;
+              break;
+            } else if (chunk.type === 'content') {
+              candidate += chunk.text;
 
-          if (!prefixDecided && candidate.length >= 7) {
-            if (!/^<reply>/i.test(candidate)) {
-              candidate = '<reply>' + candidate;
+              if (!prefixDecided && candidate.length >= 7) {
+                if (!/^<reply>/i.test(candidate)) {
+                  candidate = '<reply>' + candidate;
+                }
+                candidate = candidate.replace(/^<reply>\s*<reply>/i, '<reply>');
+                prefixDecided = true;
+              }
+
+              const partial = parsePartialAgentOutput(candidate, message);
+              if (partial.reply && partial.reply.length > lastEmittedReplyLen) {
+                const newText = partial.reply.slice(lastEmittedReplyLen);
+                lastEmittedReplyLen = partial.reply.length;
+                yield { event: 'token', data: { content: newText, attempt: attemptIdx } };
+              }
             }
-            candidate = candidate.replace(/^<reply>\s*<reply>/i, '<reply>');
-            prefixDecided = true;
           }
-
-          const partial = parsePartialAgentOutput(candidate, message);
-          if (partial.reply && partial.reply.length > lastEmittedReplyLen) {
-            const newText = partial.reply.slice(lastEmittedReplyLen);
-            lastEmittedReplyLen = partial.reply.length;
-            yield { event: 'token', data: { content: newText, attempt: attemptIdx } };
+          if (!activeToolCall) {
+            break;
           }
         }
 

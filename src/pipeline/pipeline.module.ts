@@ -12,6 +12,7 @@ import { EscalationRulesService } from './escalation-rules.service';
 import { ToneCheckerService } from './tone-checker.service';
 import { SafetyFilterService } from './safety-filter.service';
 import { PipelineOrchestratorService } from './orchestrator.service';
+import { ToolExecutorService } from './tool-executor.service';
 
 const sharedProviders = [
   OpenRouterClient,
@@ -26,6 +27,7 @@ const sharedProviders = [
   EscalationRulesService,
   ToneCheckerService,
   SafetyFilterService,
+  ToolExecutorService,
   PipelineOrchestratorService,
 ];
 

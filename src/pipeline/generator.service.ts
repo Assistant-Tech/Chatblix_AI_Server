@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '../config/app-config.service';
 import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
+import { AVAILABLE_TOOLS } from './tools.registry';
+import { OpenRouterMessage, ChatStreamEvent } from './openrouter.client';
 import { MetricsService } from './metrics.service';
 import type {
   ContextPacket,
@@ -20,7 +22,10 @@ export interface StreamGeneratorInput {
   triage: Triage;
   feedback: GeneratorFeedback | null;
   customerContext: Record<string, unknown>;
+  toolContext?: OpenRouterMessage[];
 }
+
+export type GeneratorEvent = ChatStreamEvent;
 
 @Injectable()
 export class GeneratorService {
@@ -47,8 +52,8 @@ export class GeneratorService {
     return parts.join('\n\n');
   }
 
-  async *streamGenerator(input: StreamGeneratorInput): AsyncGenerator<string> {
-    const { ctx, feedback } = input;
+  async *streamGenerator(input: StreamGeneratorInput): AsyncGenerator<GeneratorEvent> {
+    const { ctx, feedback, toolContext } = input;
     const model = this.config.generatorModel();
     const isRetry = Boolean(feedback);
     const temperature = isRetry ? 0.4 : 0.7;
@@ -59,21 +64,35 @@ export class GeneratorService {
 
     let chunkCount = 0;
     let totalLen = 0;
+
+    const messages: OpenRouterMessage[] = [
+      { role: 'system', content: system },
+      { role: 'user', content: user }
+    ];
+
+    if (toolContext && toolContext.length > 0) {
+      messages.push(...toolContext);
+    }
+
     try {
       for await (const chunk of this.llmClient.chatStream(
         {
           model,
-          system,
-          user,
           temperature,
           maxTokens: 800,
           stopSequences: ['\n\n\n'],
           timeoutMs: this.config.generatorTimeoutMs(),
+          tools: AVAILABLE_TOOLS,
+          messages,
+          system, // Fallback for clients needing it
+          user,   // Fallback
         },
         { stage: 'generator', business_id: ctx.business_id, trace_id: ctx.trace_id },
       )) {
-        chunkCount++;
-        totalLen += chunk.length;
+        if (chunk.type === 'content') {
+          chunkCount++;
+          totalLen += chunk.text.length;
+        }
         yield chunk;
       }
       if (totalLen === 0) {
