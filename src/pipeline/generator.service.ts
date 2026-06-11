@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AppConfigService } from '../config/app-config.service';
 import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
-import { AVAILABLE_TOOLS } from './tools.registry';
+import { selectToolsForProfile } from './tools.registry';
 import { OpenRouterMessage, ChatStreamEvent } from './openrouter.client';
 import { MetricsService } from './metrics.service';
 import type {
@@ -77,6 +77,11 @@ export class GeneratorService {
       messages.push(...toolContext);
     }
 
+    // Per-tenant tool gating: only expose tools this tenant's profile enables.
+    // Withheld entirely on the forced final pass after the tool-iteration cap.
+    const selectedTools = disableTools ? [] : selectToolsForProfile(ctx.profile);
+    const tools = selectedTools.length > 0 ? selectedTools : undefined;
+
     try {
       for await (const chunk of this.llmClient.chatStream(
         {
@@ -85,7 +90,7 @@ export class GeneratorService {
           maxTokens: 800,
           stopSequences: ['\n\n\n'],
           timeoutMs: this.config.generatorTimeoutMs(),
-          tools: disableTools ? undefined : AVAILABLE_TOOLS,
+          tools,
           messages,
           system, // Fallback for clients needing it
           user,   // Fallback
