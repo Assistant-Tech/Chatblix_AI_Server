@@ -19,6 +19,26 @@ export const STOCK_CHECK_TOOL: OpenRouterTool = {
   },
 };
 
+export const ORDER_LOOKUP_TOOL: OpenRouterTool = {
+  type: 'function',
+  function: {
+    name: 'order_lookup',
+    description:
+      "Look up a customer's order — its status, items, total, and shipping/tracking info — by its order number or tracking number.",
+    parameters: {
+      type: 'object',
+      properties: {
+        order_id: {
+          type: 'string',
+          description:
+            'The order number or tracking number the customer provides (e.g., "TRK12345" or an order id).',
+        },
+      },
+      required: ['order_id'],
+    },
+  },
+};
+
 /**
  * A tool plus the per-tenant predicate that decides whether it should be exposed.
  * Add new tools here with their own gate; the gate is evaluated against the
@@ -31,18 +51,24 @@ interface ToolGate {
 }
 
 /**
- * Signal for product-backed tools: the tenant has at least one product in their
- * synced catalog. FAQ-only / service tenants have no catalog, so they never get
- * `stock_check` — which keeps their prompt smaller and prevents spurious tool
- * calls. Change this predicate if a different capability signal becomes available
- * on the profile (e.g. an explicit `enabled_tools` / commerce-module flag).
+ * Commerce-tenant signal for product/order-backed tools. Today it's a proxy —
+ * "the tenant has a non-empty product catalog" — because that's the only commerce
+ * signal currently synced to ai-backend. FAQ-only / service tenants have no catalog
+ * and so are never offered commerce tools, keeping their prompt smaller and
+ * preventing spurious tool calls.
+ *
+ * NOTE: this is a heuristic. The target design (see docs/TOOL_CAPABILITY_ARCHITECTURE.md,
+ * Phase A) replaces it with an explicit `enabled_tools` list resolved authoritatively
+ * in main-backend (commerce module ∧ plan entitlement). When that lands, this
+ * predicate is swapped for a lookup against that list — for both commerce tools at once.
  */
-function hasProductCatalog(profile: BusinessProfileDto): boolean {
+function isCommerceTenant(profile: BusinessProfileDto): boolean {
   return Array.isArray(profile?.product_catalog) && profile.product_catalog.length > 0;
 }
 
 const TOOL_REGISTRY: ToolGate[] = [
-  { tool: STOCK_CHECK_TOOL, isEnabled: hasProductCatalog },
+  { tool: STOCK_CHECK_TOOL, isEnabled: isCommerceTenant },
+  { tool: ORDER_LOOKUP_TOOL, isEnabled: isCommerceTenant },
 ];
 
 /**
