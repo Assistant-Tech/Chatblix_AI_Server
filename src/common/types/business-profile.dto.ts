@@ -287,4 +287,14 @@ export class BusinessProfileDto {
   @IsBoolean()
   emoji_allowed?: boolean;
 
+  // Explicit per-tenant tool capability list, resolved and published by
+  // main-backend (see ai-backend/docs/TOOL_CAPABILITY_ARCHITECTURE.md). When
+  // present it is authoritative; when absent, tool gating falls back to the
+  // legacy profile heuristic. Tool names match src/pipeline/tools.registry.ts.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  enabled_tools?: string[];
+
 }

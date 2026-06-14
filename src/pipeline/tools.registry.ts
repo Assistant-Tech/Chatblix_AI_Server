@@ -75,8 +75,19 @@ const TOOL_REGISTRY: ToolGate[] = [
  * Select the tools a given tenant should be offered, based on their profile.
  * Returns an empty array when no tool applies — callers should treat that as
  * "send no tools" (i.e. pure prompted pipeline, no tool loop).
+ *
+ * Precedence (see docs/TOOL_CAPABILITY_ARCHITECTURE.md):
+ *  1. `enabled_tools` — the explicit list resolved by main-backend. When present
+ *     (including an empty array → "no tools"), it is authoritative.
+ *  2. Legacy per-profile heuristic gates — fallback for profiles synced before
+ *     `enabled_tools` existed.
  */
 export function selectToolsForProfile(profile: BusinessProfileDto): OpenRouterTool[] {
+  if (Array.isArray(profile?.enabled_tools)) {
+    const enabled = new Set(profile.enabled_tools);
+    return TOOL_REGISTRY.filter((g) => enabled.has(g.tool.function.name)).map((g) => g.tool);
+  }
+
   return TOOL_REGISTRY.filter((g) => {
     try {
       return g.isEnabled(profile);
