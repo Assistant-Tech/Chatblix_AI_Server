@@ -10,6 +10,7 @@ export interface LoadArgs {
   business_id: string;
   history: IncomingHistoryMessage[];
   contact_id: string;
+  conversation_id?: string;
   channel: string;
   trace_id?: string;
 }
@@ -42,6 +43,7 @@ export class ContextLoaderService {
       profile,
       history: trimHistory(args.history, maxTurns),
       contact_id: args.contact_id,
+      conversation_id: args.conversation_id,
       channel: args.channel,
       trace_id: args.trace_id,
       systemPrompt,

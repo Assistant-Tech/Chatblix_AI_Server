@@ -5,20 +5,30 @@ import { AppConfigService } from '../config/app-config.service';
 // main-backend would stall the customer-facing generation indefinitely.
 const TOOL_FETCH_TIMEOUT_MS = 5000;
 
+/** Per-turn context the executor needs. business_id is always present; the
+ * conversation/contact ids are present on the real reply path (not the sandbox). */
+export interface ToolContext {
+  business_id: string;
+  conversation_id?: string;
+  contact_id?: string;
+}
+
 @Injectable()
 export class ToolExecutorService {
   private readonly logger = new Logger(ToolExecutorService.name);
 
   constructor(private readonly config: AppConfigService) { }
 
-  async execute(toolName: string, args: string, businessId: string): Promise<string> {
-    this.logger.log(`Executing tool=${toolName} business_id=${businessId} args=${args}`);
+  async execute(toolName: string, args: string, ctx: ToolContext): Promise<string> {
+    this.logger.log(`Executing tool=${toolName} business_id=${ctx.business_id} args=${args}`);
 
     switch (toolName) {
       case 'stock_check':
-        return this.executeStockCheck(args, businessId);
+        return this.executeStockCheck(args, ctx.business_id);
       case 'order_lookup':
-        return this.executeOrderLookup(args, businessId);
+        return this.executeOrderLookup(args, ctx.business_id);
+      case 'capture_lead':
+        return this.executeCaptureLead(args, ctx);
       default:
         this.logger.warn(`Unknown tool: ${toolName}`);
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
@@ -44,6 +54,28 @@ export class ToolExecutorService {
     return this.callInternalTool('order_lookup', 'order-lookup', {
       tenantId: businessId,
       orderId: String(parsed.order_id),
+    });
+  }
+
+  private async executeCaptureLead(args: string, ctx: ToolContext): Promise<string> {
+    const parsed = parseArgs(args);
+    if (!parsed) return JSON.stringify({ error: 'Invalid JSON arguments' });
+    // conversation_id is injected server-side and is required (a lead is keyed to the
+    // conversation). Absent on the sandbox path → degrade gracefully.
+    if (!ctx.conversation_id) {
+      return JSON.stringify({ error: 'capture_lead is only available in a live conversation' });
+    }
+    if (!parsed.name) return JSON.stringify({ error: 'Missing required argument: name' });
+
+    return this.callInternalTool('capture_lead', 'capture-lead', {
+      tenantId: ctx.business_id,
+      conversationId: ctx.conversation_id,
+      contactId: ctx.contact_id ?? null,
+      name: String(parsed.name),
+      email: parsed.email ?? null,
+      phone: parsed.phone ?? null,
+      company: parsed.company ?? null,
+      notes: parsed.notes ?? null,
     });
   }
 
@@ -95,9 +127,10 @@ export class ToolExecutorService {
   }
 }
 
-function parseArgs(args: string): { query?: string; order_id?: string } | null {
+function parseArgs(args: string): Record<string, any> | null {
   try {
-    return JSON.parse(args);
+    const v = JSON.parse(args);
+    return v && typeof v === 'object' ? v : {};
   } catch {
     return null;
   }

@@ -92,6 +92,9 @@ export interface ContextPacket {
   profile: import('./business-profile.dto').BusinessProfileDto;
   history: IncomingHistoryMessage[];
   contact_id: string;
+  // Present on the real reply path; absent in the sandbox (no real conversation).
+  // Required for write tools like capture_lead that key off the conversation.
+  conversation_id?: string;
   channel: string;
   trace_id?: string;
   systemPrompt?: string;

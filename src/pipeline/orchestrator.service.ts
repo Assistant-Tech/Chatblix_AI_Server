@@ -232,7 +232,11 @@ export class PipelineOrchestratorService {
             const toolResult = await this.toolExecutor.execute(
               pendingToolCall.name,
               pendingToolCall.arguments,
-              ctx.business_id,
+              {
+                business_id: ctx.business_id,
+                conversation_id: ctx.conversation_id,
+                contact_id: ctx.contact_id,
+              },
             );
             toolContext.push({
               role: 'assistant',

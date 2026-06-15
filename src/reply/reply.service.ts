@@ -44,6 +44,7 @@ export class ReplyService {
         business_id: req.business_id,
         history: req.history,
         contact_id: req.contact_id,
+        conversation_id: req.conversation_id,
         channel: req.channel,
         trace_id: req.options?.trace_id,
       });

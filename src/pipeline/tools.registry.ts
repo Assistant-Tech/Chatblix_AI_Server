@@ -66,9 +66,36 @@ function isCommerceTenant(profile: BusinessProfileDto): boolean {
   return Array.isArray(profile?.product_catalog) && profile.product_catalog.length > 0;
 }
 
+export const CAPTURE_LEAD_TOOL: OpenRouterTool = {
+  type: 'function',
+  function: {
+    name: 'capture_lead',
+    description:
+      'Record the customer as a sales lead when they express clear buying intent or ask to be contacted. ' +
+      'Extract their details from the conversation. Only call this once interest is genuine.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: "The customer's name (required)." },
+        email: { type: 'string', description: 'Email, if the customer shared one.' },
+        phone: { type: 'string', description: 'Phone number, if shared.' },
+        company: { type: 'string', description: 'Company name, if relevant.' },
+        notes: { type: 'string', description: 'Short summary of what they are interested in.' },
+      },
+      required: ['name'],
+    },
+  },
+};
+
+/**
+ * Leads capability is not visible in the synced profile, so the legacy fallback
+ * predicate is conservative (off). The real gate is the published `enabled_tools`
+ * list, which main-backend computes from the tenant's leads-module configuration.
+ */
 const TOOL_REGISTRY: ToolGate[] = [
   { tool: STOCK_CHECK_TOOL, isEnabled: isCommerceTenant },
   { tool: ORDER_LOOKUP_TOOL, isEnabled: isCommerceTenant },
+  { tool: CAPTURE_LEAD_TOOL, isEnabled: () => false },
 ];
 
 /**
