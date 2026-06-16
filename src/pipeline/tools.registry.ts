@@ -95,6 +95,10 @@ export const CAPTURE_LEAD_TOOL: OpenRouterTool = {
 const TOOL_REGISTRY: ToolGate[] = [
   { tool: STOCK_CHECK_TOOL, isEnabled: isCommerceTenant },
   { tool: ORDER_LOOKUP_TOOL, isEnabled: isCommerceTenant },
+  // capture_lead is retired as an LLM tool: lead capture is now done deterministically
+  // from each turn's metadata in main-backend (AiHandoffService.captureLeadFromMetadata).
+  // main-backend no longer publishes "capture_lead" in enabled_tools, so this entry is
+  // inert; the definition is kept only so the tool could be re-enabled later if needed.
   { tool: CAPTURE_LEAD_TOOL, isEnabled: () => false },
 ];
 
