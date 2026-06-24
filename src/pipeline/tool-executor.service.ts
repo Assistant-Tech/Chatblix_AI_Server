@@ -11,6 +11,7 @@ export interface ToolContext {
   business_id: string;
   conversation_id?: string;
   contact_id?: string;
+  channel?: string;
 }
 
 @Injectable()
@@ -29,6 +30,8 @@ export class ToolExecutorService {
         return this.executeOrderLookup(args, ctx.business_id);
       case 'capture_lead':
         return this.executeCaptureLead(args, ctx);
+      case 'place_order':
+        return this.executePlaceOrder(args, ctx);
       default:
         this.logger.warn(`Unknown tool: ${toolName}`);
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
@@ -76,6 +79,27 @@ export class ToolExecutorService {
       phone: parsed.phone ?? null,
       company: parsed.company ?? null,
       notes: parsed.notes ?? null,
+    });
+  }
+
+  private async executePlaceOrder(args: string, ctx: ToolContext): Promise<string> {
+    const parsed = parseArgs(args);
+    if (!parsed) return JSON.stringify({ error: 'Invalid JSON arguments' });
+    if (!ctx.conversation_id) {
+      return JSON.stringify({ error: 'place_order is only available in a live conversation' });
+    }
+    if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+      return JSON.stringify({ error: 'Missing required argument: items' });
+    }
+
+    return this.callInternalTool('place_order', 'place-order', {
+      tenantId: ctx.business_id,
+      conversationId: ctx.conversation_id,
+      channel: ctx.channel ?? null,
+      items: parsed.items,
+      customerName: parsed.customer_name ?? null,
+      phone: parsed.phone ?? null,
+      address: parsed.address ?? null,
     });
   }
 

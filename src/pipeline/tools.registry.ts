@@ -66,6 +66,40 @@ function isCommerceTenant(profile: BusinessProfileDto): boolean {
   return Array.isArray(profile?.product_catalog) && profile.product_catalog.length > 0;
 }
 
+export const PLACE_ORDER_TOOL: OpenRouterTool = {
+  type: 'function',
+  function: {
+    name: 'place_order',
+    description:
+      'Place a pending order for the customer. ONLY call this AFTER the customer has explicitly ' +
+      'confirmed the full order summary (items, quantities, delivery name/phone/address). Do NOT ' +
+      'call it on mere buying interest — confirm the summary first, then call. Extract items and ' +
+      'delivery details from the conversation.',
+    parameters: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          description: 'The products the customer confirmed ordering.',
+          items: {
+            type: 'object',
+            properties: {
+              product: { type: 'string', description: 'Product name as the customer referred to it.' },
+              variant: { type: 'string', description: 'Variant/size/option, if specified (e.g. "Medium").' },
+              quantity: { type: 'number', description: 'Quantity (default 1).' },
+            },
+            required: ['product'],
+          },
+        },
+        customer_name: { type: 'string', description: "Customer's name for delivery." },
+        phone: { type: 'string', description: 'Delivery phone number.' },
+        address: { type: 'string', description: 'Delivery address.' },
+      },
+      required: ['items', 'customer_name', 'phone', 'address'],
+    },
+  },
+};
+
 export const CAPTURE_LEAD_TOOL: OpenRouterTool = {
   type: 'function',
   function: {
@@ -95,6 +129,11 @@ export const CAPTURE_LEAD_TOOL: OpenRouterTool = {
 const TOOL_REGISTRY: ToolGate[] = [
   { tool: STOCK_CHECK_TOOL, isEnabled: isCommerceTenant },
   { tool: ORDER_LOOKUP_TOOL, isEnabled: isCommerceTenant },
+  // place_order is retired as an LLM tool (like capture_lead): the model won't reliably
+  // call write tools in this reply-first pipeline. Order placement is metadata-driven —
+  // AiHandoffService places a PENDING order on the explicit `order_confirmed` flag.
+  // Kept inert so it could be re-enabled later; main-backend doesn't publish it.
+  { tool: PLACE_ORDER_TOOL, isEnabled: () => false },
   // capture_lead is retired as an LLM tool: lead capture is now done deterministically
   // from each turn's metadata in main-backend (AiHandoffService.captureLeadFromMetadata).
   // main-backend no longer publishes "capture_lead" in enabled_tools, so this entry is

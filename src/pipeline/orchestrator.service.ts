@@ -236,6 +236,7 @@ export class PipelineOrchestratorService {
                 business_id: ctx.business_id,
                 conversation_id: ctx.conversation_id,
                 contact_id: ctx.contact_id,
+                channel: ctx.channel,
               },
             );
             toolContext.push({
