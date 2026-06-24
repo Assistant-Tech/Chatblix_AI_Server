@@ -216,7 +216,10 @@ Severity guidance: use `high` when the asserted fact directly contradicts a valu
 **Check:** Reply matches `TRIAGE.closing_state.stage`:
 - Stage 1: pitch shape (product + price + payment list + dispatch ask). The dispatch ask must request **all three** of naam, phone, address (a real shopkeeper labels the parcel with the customer's name). Fires only if `stage_1_already_fired == false`.
 - Stage 2: short single-field ask for whichever of naam/phone/address/address_specifics is missing. No recap of product/price/payment. If `CUSTOMER_CONTEXT.name` is null, the reply must ask for naam (alone or alongside another missing field) — never silently skip.
-- Stage 3: bullet template with **naam, product, phone, delivery** (in that order or with naam first), plus a closing line that mentions a payment link will be sent (e.g. "Payment link ek chin ma pathaucha", "Payment link shortly pathauchhau", "Payment link coming through shortly"). The validator does NOT require the actual link itself or a "click here" CTA — the line acknowledging that the link is being sent is sufficient. `next_step == "await_payment"`. STAGE 3 must NOT fire if `CUSTOMER_CONTEXT.name` is null — that is a STAGE 2 situation; flag that case as a high violation with `fix_hint: "Naam still missing — ask for it before the final confirmation, do not skip."`.
+- Stage 3: bullet template with **naam, product, phone, delivery** (in that order or with naam first), plus a closing line that confirms the order and states how payment happens. Accept EITHER form — do NOT require a payment link:
+  - (a) **pay-on-delivery / accepted-methods** line (e.g. "Order confirm bhayo hajur. Delivery ma payment garna milcha, ya eSewa/Khalti bata"). This is the expected form for `payment_method == "cod"` and is the current default for every method. A confirmation with no link is fully valid — never flag a missing link.
+  - (b) **payment-link** line (e.g. "Payment link ek chin ma pathaucha", "Payment link shortly pathauchhau"). Valid only when `payment_method` is `esewa | khalti | online`. The validator does NOT require the actual URL or a "click here" CTA — the line acknowledging the link is being sent is sufficient.
+  Flag `high` only if the closing line is missing entirely, or if a payment-link line appears while `payment_method == "cod"` (COD has no link). `next_step == "await_payment"`. STAGE 3 must NOT fire if `CUSTOMER_CONTEXT.name` is null — that is a STAGE 2 situation; flag that case as a high violation with `fix_hint: "Naam still missing — ask for it before the final confirmation, do not skip."`.
 - Not in closing: no closing pitch.
 
 If `stage_1_already_fired == true` and the reply contains another full STAGE 1 pitch, violation.
@@ -365,6 +368,7 @@ Customers asking evaluation questions trust you with their doubt. The only corre
   - `suggested_reply_language`: `en | romanized_ne | mixed`.
   - `timeline`: `immediate | this_week | this_month | exploring | null`.
 - `lead_score` and `stage` monotonicity is enforced by the orchestrator, not the validator. Do not flag violations for this field.
+- `order_confirmed` (boolean) and `payment_method` (`cod | esewa | khalti | online | null`) are OPTIONAL keys. If present they must be valid; if absent, do NOT flag it. Never require them.
 
 If invalid, set `metadata_valid: false` and add a violation under `rule_id: 1`.
 

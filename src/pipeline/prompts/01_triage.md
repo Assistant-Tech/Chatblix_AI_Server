@@ -214,10 +214,10 @@ Look at the conversation history. Closing has fired (`stage_1_already_fired: tru
 - `in_closing`: true if buying signal already received in this thread.
 - `stage`:
   - `1` if buying signal just arrived and STAGE 1 has not yet fired
-  - `2` if STAGE 1 already fired and at least one of name/phone/address still missing
-  - `3` only when ALL THREE — name AND phone AND address (with city + area, not just city) — are captured
+  - `2` if STAGE 1 already fired and at least one of name/phone/address **or the payment method** is still missing
+  - `3` only when ALL FOUR — name AND phone AND address (with city + area, not just city) AND a chosen payment method — are captured
   - `null` if not in closing
-- `missing_fields`: subset of `["name", "phone", "address", "address_specifics"]`. Use `address_specifics` when city captured but area/tole missing. Real shopkeepers ask for naam too — the parcel needs a label and the delivery person calls it out, so STAGE 3 cannot fire without it.
+- `missing_fields`: subset of `["name", "phone", "address", "address_specifics", "payment_method"]`. Use `address_specifics` when city captured but area/tole missing. Include `"payment_method"` until the customer has **explicitly named how they'll pay** (cod / esewa / khalti / online / bank transfer) in commitment form — a question like "esewa milcha?" is NOT a choice. Real shopkeepers ask for naam too — the parcel needs a label and the delivery person calls it out, so STAGE 3 cannot fire without it. **STAGE 3 cannot fire while `payment_method` is in `missing_fields` — never assume COD.**
 
 ### `extracted_data_delta`
 
