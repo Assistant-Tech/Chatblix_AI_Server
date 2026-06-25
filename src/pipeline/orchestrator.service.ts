@@ -229,6 +229,38 @@ export class PipelineOrchestratorService {
           }
 
           if (pendingToolCall) {
+            // Some generator models (notably gemini-2.5-flash-lite) ignore the
+            // <reply>/<metadata> output contract and instead try to "deliver" the
+            // answer through a hallucinated reply-tool (e.g. send_message) whose
+            // args already carry the full reply + metadata. Treat that as the
+            // final answer rather than returning "Unknown tool" and looping —
+            // which previously discarded a valid reply AND burned a generator
+            // round-trip on every such turn (a major contributor to job_timeout).
+            const synthesized = synthesizeReplyToolCall(
+              pendingToolCall.name,
+              pendingToolCall.arguments,
+            );
+            if (synthesized) {
+              this.logger.warn(
+                `[pipeline.generator] model delivered reply via tool=${pendingToolCall.name} ` +
+                  `instead of <reply> contract business_id=${ctx.business_id}; salvaging as final answer`,
+              );
+              this.metrics.bump('reply_tool_salvaged');
+              toolsCalled.push(pendingToolCall.name);
+              candidate = synthesized;
+              prefixDecided = true;
+              const replyText = extractReplyText(candidate);
+              if (replyText.length > lastEmittedReplyLen) {
+                yield {
+                  event: 'token',
+                  data: { content: replyText.slice(lastEmittedReplyLen), attempt: attemptIdx },
+                };
+                lastEmittedReplyLen = replyText.length;
+              }
+              // Terminal: don't set activeToolCall, so the loop exits below.
+              break;
+            }
+
             const toolResult = await this.toolExecutor.execute(
               pendingToolCall.name,
               pendingToolCall.arguments,
@@ -459,6 +491,45 @@ export class PipelineOrchestratorService {
       violations: [...(verdict.violations ?? []), ...added],
     };
   }
+}
+
+// Reply-delivery pseudo-tools some models invent instead of emitting the
+// <reply>/<metadata> contract directly. The reply text and metadata live in the
+// tool-call arguments, so we can reconstruct the canonical candidate from them.
+const REPLY_TOOL_NAMES = /^(send_message|send_reply|sendmessage|reply|respond|message)$/i;
+
+/**
+ * If `name` is a known reply-delivery pseudo-tool and its arguments carry a
+ * non-empty reply, return a canonical `<reply>…</reply><metadata>{…}</metadata>`
+ * string. Otherwise return null (it's a real tool call to be executed normally).
+ */
+function synthesizeReplyToolCall(name: string, argsJson: string): string | null {
+  if (!REPLY_TOOL_NAMES.test(name)) return null;
+
+  let parsed: Record<string, any>;
+  try {
+    const v = JSON.parse(argsJson);
+    if (!v || typeof v !== 'object') return null;
+    parsed = v;
+  } catch {
+    return null;
+  }
+
+  const replyRaw = parsed.reply ?? parsed.message ?? parsed.text ?? parsed.content;
+  if (typeof replyRaw !== 'string' || replyRaw.trim().length === 0) return null;
+
+  // metadata may arrive as an object or as a JSON-encoded string (observed in prod).
+  let meta: unknown = parsed.metadata ?? parsed.meta ?? null;
+  if (typeof meta === 'string') {
+    try {
+      meta = JSON.parse(meta);
+    } catch {
+      meta = null;
+    }
+  }
+  const metaJson = meta && typeof meta === 'object' ? JSON.stringify(meta) : '{}';
+
+  return `<reply>${replyRaw.trim()}</reply><metadata>${metaJson}</metadata>`;
 }
 
 function extractReplyText(candidate: string): string {

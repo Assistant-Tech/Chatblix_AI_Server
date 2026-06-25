@@ -129,6 +129,16 @@ export class ValidatorService {
         mediumCount < 2 &&
         parsed.metadata_valid !== false &&
         parsed.language_match !== false;
+
+      if (!parsed.pass) {
+        const summary = parsed.violations
+          .map((v) => `#${v.rule_id}(${v.severity})${v.fix_hint ? ': ' + v.fix_hint : ''}`)
+          .join(' | ');
+        this.logger.warn(
+          `validator FAIL trace_id=${input.ctx.trace_id ?? '-'} high=${highCount} medium=${mediumCount} ` +
+            `metadata_valid=${parsed.metadata_valid} language_match=${parsed.language_match} violations=[${summary}]`,
+        );
+      }
     }
 
     return {

@@ -68,6 +68,16 @@ export class AppConfigService {
     return this.config.get('PIPELINE_MAX_RETRIES', { infer: true });
   }
 
+  /**
+   * Hard wall-clock budget for a single ai.reply job in the worker. Must comfortably
+   * exceed the pipeline's real worst case — triage + (generator + validator) per
+   * attempt across (maxRetries + 1) attempts — or slow-but-valid turns are killed
+   * mid-flight and surface as job_timeout hard failures.
+   */
+  workerJobTimeoutMs(): number {
+    return this.config.get('WORKER_JOB_TIMEOUT_MS', { infer: true });
+  }
+
   maxHistoryTurns(): number {
     return this.config.get('MAX_HISTORY_TURNS', { infer: true });
   }

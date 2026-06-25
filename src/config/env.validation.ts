@@ -78,6 +78,15 @@ export class EnvSchema {
   @IsInt()
   @Min(1)
   MAX_HISTORY_TURNS: number = 10;
+
+  // Hard wall-clock budget for one ai.reply job in the worker. Keep it ≥ triage +
+  // (generator + validator) × (PIPELINE_MAX_RETRIES + 1) + headroom, otherwise valid
+  // but slow turns are killed mid-flight and surface as job_timeout hard failures.
+  // The default suits the fast Claude tier; raise it (see .env) for slower models.
+  @IsOptional()
+  @IsInt()
+  @Min(1000)
+  WORKER_JOB_TIMEOUT_MS: number = 45_000;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvSchema {

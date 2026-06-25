@@ -2,10 +2,9 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
 import { ReplyService } from '../reply/reply.service';
+import { AppConfigService } from '../config/app-config.service';
 import type { ReplyRequestDto } from '../common/types/reply.dto';
 import type { AiReplyJobResult } from '../common/types/turn-log.types';
-
-const JOB_TIMEOUT_MS = 45_000;
 
 @Processor('ai.reply', {
   concurrency: 5,
@@ -16,7 +15,10 @@ const JOB_TIMEOUT_MS = 45_000;
 export class AiReplyWorker extends WorkerHost {
   private readonly logger = new Logger(AiReplyWorker.name);
 
-  constructor(private readonly replyService: ReplyService) {
+  constructor(
+    private readonly replyService: ReplyService,
+    private readonly config: AppConfigService,
+  ) {
     super();
   }
 
@@ -26,7 +28,10 @@ export class AiReplyWorker extends WorkerHost {
     );
 
     try {
-      const result = await withTimeout(this.replyService.handle(job.data), JOB_TIMEOUT_MS);
+      const result = await withTimeout(
+        this.replyService.handle(job.data),
+        this.config.workerJobTimeoutMs(),
+      );
       this.logger.log(
         `completed job=${job.id} status=${result.response.status} duration_ms=${result.turnLog.durationMs}`,
       );

@@ -37,6 +37,22 @@ export class LLMServerError extends Error {
   }
 }
 
+/**
+ * The provider returned a well-formed 200 response that simply carries no
+ * assistant content (e.g. a reasoning model that burned its token budget on
+ * reasoning and emitted no final message). This is NOT transient — retrying the
+ * same deterministic prompt reproduces it — so it is deliberately non-retriable
+ * and lets callers fall back immediately (validator/triage soft-pass) instead of
+ * wasting the full retry budget on a guaranteed-empty result.
+ */
+export class LLMNoContentError extends Error {
+  readonly kind = 'no_content' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'LLMNoContentError';
+  }
+}
+
 export interface CallContext {
   business_id?: string;
   trace_id?: string;
@@ -117,11 +133,18 @@ export class LLMClientService {
   }
 
   private translate(e: unknown): Error {
-    if (e instanceof LLMTimeoutError || e instanceof LLMRateLimitError || e instanceof LLMServerError) {
+    if (
+      e instanceof LLMTimeoutError ||
+      e instanceof LLMRateLimitError ||
+      e instanceof LLMServerError ||
+      e instanceof LLMNoContentError
+    ) {
       return e;
     }
     if (e instanceof OpenRouterError) {
       if (e.kind === 'timeout') return new LLMTimeoutError(e.message);
+      // A 200 with no usable content — non-retriable; let the caller fall back now.
+      if (e.kind === 'no_content') return new LLMNoContentError(e.message);
       if (e.status === 429) {
         return new LLMRateLimitError(e.message);
       }
