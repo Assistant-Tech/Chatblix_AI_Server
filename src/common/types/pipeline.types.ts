@@ -84,6 +84,16 @@ export interface IncomingHistoryMessage {
   metadata?: Record<string, unknown>;
 }
 
+// Compact summary of an order already placed for this conversation. Set by
+// main-backend so the generator knows an order exists and can stop re-confirming.
+export interface ExistingOrderInfo {
+  ref: string;
+  status: string;
+  paymentMethod?: string | null;
+  total: number;
+  items: Array<{ title: string; quantity: number }>;
+}
+
 // The single bag of data every pipeline stage receives.
 // No service inside the pipeline should re-read DB / caches —
 // ContextLoader is the only place that hydrates this.
@@ -98,6 +108,8 @@ export interface ContextPacket {
   channel: string;
   trace_id?: string;
   systemPrompt?: string;
+  // Present only when an order has already been placed for this conversation.
+  existing_order?: ExistingOrderInfo;
 }
 
 export type PipelineEventName =

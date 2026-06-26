@@ -4,7 +4,11 @@ import { SystemPromptCompilerService } from '../business/system-prompt-compiler.
 import { PromptCacheService } from '../cache/prompt-cache.service';
 import { AppConfigService } from '../config/app-config.service';
 import type { BusinessProfileDto } from '../common/types/business-profile.dto';
-import type { ContextPacket, IncomingHistoryMessage } from '../common/types/pipeline.types';
+import type {
+  ContextPacket,
+  ExistingOrderInfo,
+  IncomingHistoryMessage,
+} from '../common/types/pipeline.types';
 
 export interface LoadArgs {
   business_id: string;
@@ -13,6 +17,7 @@ export interface LoadArgs {
   conversation_id?: string;
   channel: string;
   trace_id?: string;
+  existing_order?: ExistingOrderInfo;
 }
 
 @Injectable()
@@ -47,6 +52,7 @@ export class ContextLoaderService {
       channel: args.channel,
       trace_id: args.trace_id,
       systemPrompt,
+      existing_order: args.existing_order,
     };
   }
 

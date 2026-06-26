@@ -10,6 +10,7 @@ import { SafetyFilterService } from './safety-filter.service';
 import { EscalationRulesService } from './escalation-rules.service';
 import { MetricsService } from './metrics.service';
 import { severityScore, verdictPasses } from '../common/utils/pipeline/severity';
+import { looksLikeLeakedReasoning, replyBodyOf } from '../common/utils/pipeline/reasoning-leak';
 import { parsePartialAgentOutput } from '../common/utils/parser';
 import { OpenRouterMessage } from './openrouter.client';
 import { ToolExecutorService } from './tool-executor.service';
@@ -406,7 +407,20 @@ export class PipelineOrchestratorService {
         .replace(/<\/?(reply|metadata)[^>]*>/gi, '')
         .replace(/\{[\s\S]*\}/g, '')
         .trim().length > 1;
-    if (!shipped || !hasReplyBody) {
+
+    // Chain-of-thought can leak into the reply body (most often after a failed
+    // tool call), and the streaming prefix logic may wrap it inside <reply> tags
+    // so the tag check above still passes. Catch it explicitly and fall back to a
+    // clean handoff rather than shipping the model's raw thinking to the customer.
+    const reasoningLeaked = looksLikeLeakedReasoning(replyBodyOf(shipped));
+    if (reasoningLeaked) {
+      this.logger.warn(
+        `[pipeline] reasoning leak detected in shipped reply business_id=${ctx.business_id} trace_id=${ctx.trace_id ?? '-'}; falling back to handoff`,
+      );
+      this.metrics.bump('turn_reasoning_leak_caught');
+    }
+
+    if (!shipped || !hasReplyBody || reasoningLeaked) {
       shipped = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
       outcome = 'ship_with_violations';
       this.metrics.bump('turn_ship_with_violations');

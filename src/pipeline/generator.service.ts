@@ -49,6 +49,11 @@ export class GeneratorService {
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
       `TRIAGE: ${JSON.stringify(triage)}`,
     ];
+    // When an order already exists for this conversation, tell the generator so it
+    // stops re-confirming / re-running STAGE 3 and can surface the tracking ref.
+    if (ctx.existing_order) {
+      parts.push(`EXISTING_ORDER: ${JSON.stringify(ctx.existing_order)}`);
+    }
     if (feedback) {
       parts.push(`FEEDBACK: ${JSON.stringify(feedback)}`);
     }

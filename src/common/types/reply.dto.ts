@@ -4,11 +4,14 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsISO8601,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
   MaxLength,
+  Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -44,6 +47,40 @@ export class HistoryMessageDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown>;
+}
+
+export class ExistingOrderItemDto {
+  @IsString()
+  @MaxLength(200)
+  title!: string;
+
+  @IsInt()
+  @Min(1)
+  quantity!: number;
+}
+
+export class ExistingOrderDto {
+  @IsString()
+  @MaxLength(200)
+  ref!: string;
+
+  @IsString()
+  @MaxLength(40)
+  status!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  paymentMethod?: string | null;
+
+  @IsNumber()
+  total!: number;
+
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => ExistingOrderItemDto)
+  items!: ExistingOrderItemDto[];
 }
 
 export class ReplyOptionsDto {
@@ -105,6 +142,15 @@ export class ReplyRequestDto {
   @ValidateNested({ each: true })
   @Type(() => HistoryMessageDto)
   history!: HistoryMessageDto[];
+
+  @ApiPropertyOptional({
+    type: ExistingOrderDto,
+    description: 'Set by main-backend when an order already exists for this conversation.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ExistingOrderDto)
+  existing_order?: ExistingOrderDto;
 
   @ApiPropertyOptional({ type: ReplyOptionsDto })
   @IsOptional()

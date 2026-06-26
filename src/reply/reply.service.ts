@@ -47,6 +47,7 @@ export class ReplyService {
         conversation_id: req.conversation_id,
         channel: req.channel,
         trace_id: req.options?.trace_id,
+        existing_order: req.existing_order,
       });
 
       if (!this.hours.isWithinHours(ctx.profile)) {
