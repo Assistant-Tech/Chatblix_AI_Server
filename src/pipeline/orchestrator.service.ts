@@ -11,6 +11,7 @@ import { EscalationRulesService } from './escalation-rules.service';
 import { MetricsService } from './metrics.service';
 import { severityScore, verdictPasses } from '../common/utils/pipeline/severity';
 import { looksLikeLeakedReasoning, replyBodyOf } from '../common/utils/pipeline/reasoning-leak';
+import { triageRequiresValidation } from './validation-risk';
 import { parsePartialAgentOutput } from '../common/utils/parser';
 import { OpenRouterMessage } from './openrouter.client';
 import { ToolExecutorService } from './tool-executor.service';
@@ -369,18 +370,38 @@ export class PipelineOrchestratorService {
         candidate = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
       }
 
-      const validatorResult = await this.validator.callValidator({
-        ctx,
-        message,
-        customerContext,
-        triage,
-        candidate,
-      });
-      accTokensIn += validatorResult.tokensIn ?? 0;
-      accTokensOut += validatorResult.tokensOut ?? 0;
+      // Conditional validation (opt-in via PIPELINE_VALIDATE_RISKY_ONLY): skip the
+      // validator LLM on clearly low-risk turns. The cheap, local tone + safety
+      // checks still run via composeVerdict, so a PII/banned-phrase leak can still
+      // force a regeneration even on a skipped turn.
+      const skipValidation =
+        this.config.validateRiskyOnly() && !triageRequiresValidation(triage);
 
-      // Compose tone + safety violations on top of the validator verdict.
-      const composed = this.composeVerdict(candidate, ctx.profile, validatorResult.verdict);
+      let composed: Verdict;
+      if (skipValidation) {
+        this.metrics.bump('validator_skipped_low_risk');
+        composed = this.composeVerdict(candidate, ctx.profile, {
+          pass: true,
+          violations: [],
+          metadata_valid: true,
+          language_match: true,
+          summary: 'validator_skipped:low_risk',
+          _soft_pass: true,
+        });
+      } else {
+        const validatorResult = await this.validator.callValidator({
+          ctx,
+          message,
+          customerContext,
+          triage,
+          candidate,
+        });
+        accTokensIn += validatorResult.tokensIn ?? 0;
+        accTokensOut += validatorResult.tokensOut ?? 0;
+
+        // Compose tone + safety violations on top of the validator verdict.
+        composed = this.composeVerdict(candidate, ctx.profile, validatorResult.verdict);
+      }
 
       attempts.push({ attempt_idx: attemptIdx, candidate, verdict: composed });
 

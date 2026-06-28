@@ -79,6 +79,14 @@ export class EnvSchema {
   @Min(1)
   MAX_HISTORY_TURNS: number = 10;
 
+  // When true, the validator LLM call is skipped on low-risk turns (simple
+  // greetings / factual answers with no price, closing, medical, complaint, or
+  // handoff signal). Trades the per-turn quality gate for a saved Haiku call.
+  // Default false → every turn is validated (current behavior).
+  @IsOptional()
+  @IsBoolean()
+  PIPELINE_VALIDATE_RISKY_ONLY: boolean = false;
+
   // Hard wall-clock budget for one ai.reply job in the worker. Keep it ≥ triage +
   // (generator + validator) × (PIPELINE_MAX_RETRIES + 1) + headroom, otherwise valid
   // but slow turns are killed mid-flight and surface as job_timeout hard failures.

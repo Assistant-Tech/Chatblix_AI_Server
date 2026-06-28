@@ -4,6 +4,7 @@ import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { selectToolsForProfile } from './tools.registry';
 import { OpenRouterMessage, ChatStreamEvent, cachedSystemMessage } from './openrouter.client';
+import { compactHistory } from './history-context';
 import { MetricsService } from './metrics.service';
 import type {
   ContextPacket,
@@ -45,7 +46,7 @@ export class GeneratorService {
     const { ctx, message, customerContext, triage, feedback } = args;
     const parts = [
       `LATEST_MESSAGE: ${message}`,
-      `CONVERSATION_HISTORY: ${JSON.stringify(ctx.history || [])}`,
+      `CONVERSATION_HISTORY: ${JSON.stringify(compactHistory(ctx.history))}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
       `TRIAGE: ${JSON.stringify(triage)}`,
     ];

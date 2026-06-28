@@ -81,4 +81,8 @@ export class AppConfigService {
   maxHistoryTurns(): number {
     return this.config.get('MAX_HISTORY_TURNS', { infer: true });
   }
+
+  validateRiskyOnly(): boolean {
+    return this.config.get('PIPELINE_VALIDATE_RISKY_ONLY', { infer: true });
+  }
 }
