@@ -1,7 +1,6 @@
 # MODEL 3 — VALIDATOR
 
 > Runs after the Generator. Outputs a verdict JSON with structured violations. Drives the retry loop.
-> Recommended model: Claude Haiku 4.5. Temperature: 0.0 (deterministic; this is rule-checking).
 > Rule range: 1-33. Stable IDs across versions.
 
 ---

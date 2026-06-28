@@ -1,7 +1,6 @@
 # MODEL 1 — TRIAGE / CLASSIFIER
 
 > Strict-JSON classifier. Runs first in the pipeline. Output is consumed by the Generator.
-> Recommended model: Claude Haiku 4.5. Temperature: 0.1 (low, this job is deterministic).
 
 ---
 

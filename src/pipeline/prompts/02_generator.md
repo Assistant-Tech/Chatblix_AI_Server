@@ -1,7 +1,6 @@
 # MODEL 2 — GENERATOR
 
 > Writes the actual `<reply>` and `<metadata>` for the customer. Consumes triage JSON; never re-classifies.
-> Recommended model: Claude Sonnet 4.6 (Opus 4.7 for high-value tier). Temperature: 0.7-0.8.
 
 ---
 
