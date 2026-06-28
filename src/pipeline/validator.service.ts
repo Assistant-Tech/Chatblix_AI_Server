@@ -10,7 +10,39 @@ import type {
   ContextPacket,
   Triage,
   Verdict,
+  Violation,
 } from '../common/types/pipeline.types';
+
+// Medium-severity rules that are purely stylistic/tone (vs. substantive quality).
+// Violations of these count half toward the medium pass-gate so two pure-tone
+// slips don't force a regeneration. Keep in sync with 03_validator.md "Severity
+// assignment". 12=no_stiff_phrases, 28=no_corporate_hedge, 33=particle_overuse.
+const STYLISTIC_MEDIUM_RULES = new Set<number>([12, 28, 33]);
+
+/**
+ * Recompute the validator pass gate from the emitted violations.
+ *
+ * pass = no HIGH violations AND weighted-medium score < 2 AND metadata/language
+ * not explicitly false. Stylistic mediums (see STYLISTIC_MEDIUM_RULES) are
+ * half-weighted, so two pure-tone slips pass but two substantive slips (or one
+ * tone + one substantive) block. Pure function — exported for unit testing.
+ */
+export function computeValidatorPass(
+  violations: Violation[],
+  metadataValid: boolean | undefined,
+  languageMatch: boolean | undefined,
+): { pass: boolean; highCount: number; mediumCount: number; weightedMedium: number } {
+  const list = Array.isArray(violations) ? violations : [];
+  const highCount = list.filter((v) => v.severity === 'high').length;
+  const mediumViolations = list.filter((v) => v.severity === 'medium');
+  const weightedMedium = mediumViolations.reduce(
+    (sum, v) => sum + (STYLISTIC_MEDIUM_RULES.has(Number(v.rule_id)) ? 0.5 : 1),
+    0,
+  );
+  const pass =
+    highCount === 0 && weightedMedium < 2 && metadataValid !== false && languageMatch !== false;
+  return { pass, highCount, mediumCount: mediumViolations.length, weightedMedium };
+}
 
 export interface ValidatorCallResult {
   verdict: Verdict;
@@ -123,21 +155,21 @@ export class ValidatorService {
         return ok;
       });
 
-      const highCount = parsed.violations.filter((v) => v.severity === 'high').length;
-      const mediumCount = parsed.violations.filter((v) => v.severity === 'medium').length;
-      parsed.pass =
-        highCount === 0 &&
-        mediumCount < 2 &&
-        parsed.metadata_valid !== false &&
-        parsed.language_match !== false;
+      const gate = computeValidatorPass(
+        parsed.violations,
+        parsed.metadata_valid,
+        parsed.language_match,
+      );
+      parsed.pass = gate.pass;
 
       if (!parsed.pass) {
         const summary = parsed.violations
           .map((v) => `#${v.rule_id}(${v.severity})${v.fix_hint ? ': ' + v.fix_hint : ''}`)
           .join(' | ');
         this.logger.warn(
-          `validator FAIL trace_id=${input.ctx.trace_id ?? '-'} high=${highCount} medium=${mediumCount} ` +
-            `metadata_valid=${parsed.metadata_valid} language_match=${parsed.language_match} violations=[${summary}]`,
+          `validator FAIL trace_id=${input.ctx.trace_id ?? '-'} high=${gate.highCount} medium=${gate.mediumCount} ` +
+            `weighted_medium=${gate.weightedMedium} metadata_valid=${parsed.metadata_valid} ` +
+            `language_match=${parsed.language_match} violations=[${summary}]`,
         );
       }
     }

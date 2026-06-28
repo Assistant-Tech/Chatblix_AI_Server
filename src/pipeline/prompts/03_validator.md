@@ -50,16 +50,22 @@ When violations exist:
 
 `pass = true` if and only if:
 - Zero `high` violations, AND
-- Fewer than 2 `medium` violations, AND
+- A weighted `medium` score below 2, AND
 - `metadata_valid == true`, AND
 - `language_match == true`.
 
 Otherwise `pass = false`.
 
-### Severity assignment (fixed per rule, see RULES table)
+> The orchestrator recomputes `pass` from the violations you emit, so focus on
+> getting `rule_id` + `severity` right rather than the `pass` boolean itself.
+
+### Severity assignment
 
 - `high` — UX-breaking or trust-breaking. Triggers retry on its own.
-- `medium` — quality slip. Two together trigger retry; one alone is logged-pass.
+- `medium` — quality slip. Substantive mediums count 1.0 toward the gate; purely
+  stylistic/tone mediums (rules 12 stiff-phrases, 28 corporate-hedge, 33
+  particle-overuse) count 0.5. So two real quality slips block, but two pure-tone
+  slips do not — they pass with a logged warning.
 - `low` — style preference. Always logged, never blocks alone.
 
 ---
@@ -84,15 +90,11 @@ Each rule has a stable `rule_id`. Do not renumber across versions; the offline c
 
 **Check:** `CANDIDATE` is exactly `<reply>...</reply><metadata>{...}</metadata>`. No preamble, no thinking blocks, no code fences, no markdown around the tags. Inside `<reply>`: plain text, no markdown, no bullets (except STAGE 3 confirmation), no emojis, no em-dashes (`—`, U+2014), no en-dashes (`–`, U+2013). Plain hyphens only inside numbers ("1-2 din") or codes ("98XX").
 
-**Meta-reasoning detection (HIGH):** if `CANDIDATE` opens with any of these patterns, it's a structural failure — the generator narrated its reasoning instead of producing a reply. Flag rule 1 with HIGH severity even if `<reply>` appears later:
-- "Looking at..."
-- "The customer is..."
-- "Based on the..."
-- "My understanding is..."
-- "Given that..." / "Since..."
-- "I'll analyze..." / "Let me think..."
-- "The triage says..."
-- Any first-person analytical narration before `<reply>`.
+**Meta-reasoning detection (HIGH):** flag this ONLY when the generator narrated its reasoning *to the customer* — i.e. analytical text appears **before/outside the `<reply>` tag**, OR the reply body itself is reasoning narration rather than a customer-facing message. Examples that ARE structural failures:
+- Any text before the opening `<reply>` tag (e.g. `Looking at the conversation, ... <reply>...`).
+- A reply body that talks about the customer/triage in the third person ("The customer is asking...", "The triage says...", "My understanding is...", "Let me think...", "I'll analyze...").
+
+Do **NOT** flag a reply just because a sentence begins with a normal connective ("Since...", "Given...", "Based on...") when the candidate already starts with `<reply>` and the body is a genuine customer-facing message. Those are valid reply content, not leaked reasoning. When unsure and the body clearly addresses the customer, do not flag.
 
 **Evidence rule:** quote the offending substring or the malformed prefix.
 
@@ -123,9 +125,11 @@ If a price appears without any of those, violation.
 
 ### Rule 5 — no_padding_with_known_facts (MEDIUM)
 
-**Check:** Reply does not restate facts the assistant already gave: product name (when context is established), delivery time (already given), payment methods (already given), NPR amounts (covered by Rule 4). The reply ADVANCES — adds new info, asks the next field, answers the new question.
+**Check:** Flag ONLY the stuck-record pattern — a reply that restates facts the assistant already gave (product name, delivery time, payment methods, NPR amounts — amounts are covered by Rule 4) **and adds nothing new**: no new info, no next-field ask, no answer to a new question, no clarification.
 
-Stuck-record pattern is the typical violation: T1 gave price+address-ask, T2 repeats price+address-ask in slightly different words.
+A reply that restates one prior fact while ADVANCING is **not** a violation — e.g. confirming understanding and then asking the next field, or briefly recapping context before answering the new question. Confirmations and clarifications pass.
+
+Typical violation: T1 gave price+address-ask, T2 repeats price+address-ask in slightly different words with no new step. When in doubt, do not flag.
 
 ### Rule 6 — no_re_ask_known_field (HIGH)
 
@@ -154,14 +158,14 @@ Right: "Kati din bhitra return milcha?" → "7 din bhitra milcha hajur."
 
 **Check:** If the customer asked about a category in general (e.g., "return policy kasto cha?"), the reply does NOT respond with "what issue are you facing?" or equivalent unless the customer actually mentioned an issue in `LATEST_MESSAGE` or `CONVERSATION_HISTORY`.
 
-### Rule 11 — formal_pronoun_only (HIGH)
+### Rule 11 — formal_pronoun_only (HIGH for informal pronouns, MEDIUM for verb drift)
 
-**Check:** When language is `romanized_ne` or `mixed`, the reply contains ZERO instances of:
-- `timi`, `timro`, `timilai`
-- Informal verb conjugations: `garchau`, `garchas`, `garyau`
-- Drifted plural / informal-plural endings on `-chhau` / `-nchhau`: `dekhinchhau`, `linchhau`, `garchhau`, `milchhau`, `hunchhau`, `paunchhau`, `bhanchhau` (1st-person-plural / "we / you-all" forms — they break the formal singular register).
+**Check:** When language is `romanized_ne` or `mixed`, the reply must not break the formal register. Two severity tiers:
 
-Only tapai-form: `tapai`, `tapailai`, `tapaiko`, `garnu hunchha`, `chahanu hunchha`. Use general/singular verb endings: `dekhincha`, `milcha`, `huncha`, `lagcha`, `linchha`. Watch the END of the reply — register slips happen on the closing question.
+- **HIGH** — direct informal/second-person-familiar pronouns, which read as disrespectful to a customer: `timi`, `timro`, `timilai`. Any occurrence is a HIGH violation.
+- **MEDIUM** — informal/plural verb-ending drift only (no familiar pronoun present): `garchau`, `garchas`, `garyau`, and `-chhau` / `-nchhau` endings such as `dekhinchhau`, `linchhau`, `garchhau`, `milchhau`, `hunchhau`, `paunchhau`, `bhanchhau`. These are register slips, not rudeness — emit a single MEDIUM violation for any such drift.
+
+Only tapai-form: `tapai`, `tapailai`, `tapaiko`, `garnu hunchha`, `chahanu hunchha`. Use general/singular verb endings: `dekhincha`, `milcha`, `huncha`, `lagcha`, `linchha`. Watch the END of the reply — register slips happen on the closing question. Set the `severity` field on the violation accordingly (`high` if a familiar pronoun appears, otherwise `medium`).
 
 ### Rule 12 — no_stiff_phrases (MEDIUM)
 
@@ -195,7 +199,7 @@ Forced-choice closes after a `direct_factual` answer also count under this rule 
 
 **Check:** When `TRIAGE.intent_path == "confusion"`, the reply does NOT use the same words as the prior assistant turn. It re-explains shorter, in different words, and asks ONE specific thing.
 
-Compute approximate similarity to the prior assistant turn (>70% token overlap) → violation.
+Compute approximate similarity to the prior assistant turn (**>80%** token overlap) → violation. When computing overlap, **exclude unavoidable shared terms**: product/brand names, captured-field labels (naam, phone, address, area, tole, delivery, payment), prices, and common particles. A re-explanation naturally reuses those; only flag when the *explanatory* wording is essentially unchanged. When unsure, do not flag.
 
 ### Rule 16 — no_word_for_word_repeat (HIGH)
 
@@ -244,11 +248,18 @@ If `stage_1_already_fired == true` and the reply contains another full STAGE 1 p
 
 **Check:** When `referral_present` is in `TRIAGE.edge_case_flags`, `metadata.tags` includes `"referral_present"` and the reply finishes the primary order before asking about the friend's order.
 
-### Rule 25 — recommendation_hygiene (HIGH)
+### Rule 25 — recommendation_hygiene (tiered: HIGH / MEDIUM / LOW per sub-check)
+
+**Severity per sub-check** — set the `severity` field on each emitted violation according to which sub-check failed:
+- **HIGH** — ingredient lists, mechanism claims (the two-tier list below), and any health/medical efficacy claim. These mislead the customer and must block.
+- **MEDIUM** — two-product pitches in one reply, forced-choice closes, marketing adjectives, and the flat-tone / no-particle sub-check.
+- **LOW** — the "under 3 lines" length preference.
+
+Emit a separate violation per failed sub-check with its own severity; do not bundle everything as HIGH.
 
 **Check:** When `TRIAGE.intent_path == "concern"`, the reply has ALL of:
-- ZERO ingredient lists ("turmeric ra sandalwood le...", "with niacinamide and...")
-- ZERO mechanism claims. Two tiers:
+- ZERO ingredient lists ("turmeric ra sandalwood le...", "with niacinamide and...") — **HIGH**
+- ZERO mechanism claims (**HIGH**). Two tiers:
 
   **Universal — forbidden for ALL business types** (case-insensitive substring match):
   - "cures", "treats", "heals", "clinically proven", "doctor recommended", "100% guaranteed", "scientifically tested"
@@ -258,12 +269,12 @@ If `stage_1_already_fired == true` and the reply contains another full STAGE 1 p
   - "anti-bacterial ho", "skin tone even-out", "pH balance", "deep cleansing", "pores tight garcha", "pores close garcha", "pores shrink garcha", "oil control garcha", "blackhead remove", "dead skin remove", "exfoliate garcha", "collagen boost", "hydration lock", "moisture lock", "barrier repair", "skin renewal", "cell regeneration", "anti-aging garcha", "wrinkle reduce", "hyperpigmentation hatauchha", "melanin reduce"
 
   Do NOT apply the skincare-specific list to electronics, food, clothing, salon, or service tenants — those domains have different mechanism language that is not forbidden. Use outcome/timeframe phrasing instead ("2-3 hapta ma farak dekhincha", "regular use le ramro huncha", "oily skin lai suit garcha").
-- ZERO two-product pitches in one reply
-- ZERO forced-choice closes ("duitai ko details chahiyo ki kunai ek?")
-- ZERO marketing adjectives: "amazing", "premium", "high-quality", "ekdamai dami", "world-class", "luxurious". **Explicitly NOT marketing adjectives** (do NOT flag these): "bestseller", "bestseller wala", "best wala", "regular customer le linchha", "hamro yaha ko", "majjale", "ramro", "pakka". These are the approved Nepali shopkeeper outcome-cue vocabulary; flagging them is a false positive.
+- ZERO two-product pitches in one reply — **MEDIUM**
+- ZERO forced-choice closes ("duitai ko details chahiyo ki kunai ek?") — **MEDIUM**
+- ZERO marketing adjectives (**MEDIUM**): "amazing", "premium", "high-quality", "ekdamai dami", "world-class", "luxurious". **Explicitly NOT marketing adjectives** (do NOT flag these): "bestseller", "bestseller wala", "best wala", "regular customer le linchha", "hamro yaha ko", "majjale", "ramro", "pakka". These are the approved Nepali shopkeeper outcome-cue vocabulary; flagging them is a false positive.
 - "farak dekhincha" / "farak aaucha" / "2-3 hapta ma farak" is **NOT** a mechanism claim — it's a timeframe/outcome cue and is explicitly allowed. Mechanism claims look like "anti-bacterial ho", "pH balance", "skin tone even-out", "kills bacteria", "deep cleansing" — those are forbidden. Plain time-to-result phrasing ("farak dekhincha") is fine.
 - Pattern: concern ack → ONE product → ONE outcome cue → ONE soft close (the close is allowed on the FIRST concern recommendation; Rule 31 catches REPEATED close pitches across turns).
-- Under 3 lines.
+- Under 3 lines — **LOW**.
 
 **Tone (medium severity sub-check):** the reply leans on at least one Nepali shopkeeper particle to avoid sounding like a brochure: "ni", "ni ho", "hai", "hola", "ta", "majjale", "tyo ta", "wala ni ho". A reply with zero particles that reads like a flat product card ("Neem Soap ramro huncha. Hamro bestseller. Order garne ho?") triggers a medium-severity violation under this rule with `evidence` quoting the flat reply and `fix_hint: "Add Nepali shopkeeper particles (ni / hai / hola / majjale) to soften the tone — e.g. 'Hamro bestseller wala ni ho. Daily lagaunu hola, 2-3 hapta ma majjale farak dekhincha hai.'"`.
 
@@ -490,4 +501,4 @@ If invalid, set `metadata_valid: false` and add a violation under `rule_id: 1`.
 ---
 
 ## VERSION
-Validator: 1.7.0 | Aligned with: addendum.md 4.17.0 self-check rules 1-26 + 27-30 (shopkeeper-voice extensions) + 31-32 (no-repeat-close-pitch / evaluation-question) + Rule 19 naam-required-for-STAGE-3 + Rule 25 mechanism-claim list extended (pores tight / oil control / etc.) + Rule 33 particle_overuse extended to catch double-hajur openings+closings | Temp: 0.0
+Validator: 1.8.0 | Changes from 1.7.0 (Phase 2 strictness recalibration): Rule 1 meta-reasoning scoped to leaked-reasoning only (no false-positive on normal connectives); Rule 5 padding restricted to true stuck-record (confirmations/clarifications pass); Rule 11 tiered (familiar pronouns HIGH, verb-ending drift MEDIUM); Rule 15 overlap threshold 70%→80% with shared-term exclusion; Rule 25 tiered HIGH/MEDIUM/LOW per sub-check; stylistic mediums (12/28/33) half-weighted in the pass gate. | Temp: 0.0
