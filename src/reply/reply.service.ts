@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ContextLoaderService } from './context-loader.service';
+import { RedisClient } from '../cache/redis.client';
 import { HoursService } from '../pipeline/hours.service';
 import { PipelineOrchestratorService } from '../pipeline/orchestrator.service';
 import { AppConfigService } from '../config/app-config.service';
@@ -30,6 +31,7 @@ export class ReplyService {
     private readonly hours: HoursService,
     private readonly orchestrator: PipelineOrchestratorService,
     private readonly config: AppConfigService,
+    private readonly redis: RedisClient,
   ) {}
 
   /**
@@ -66,7 +68,9 @@ export class ReplyService {
         };
       }
 
-      const collected = await this.runPipeline(req, ctx);
+      const stalledCountIncoming = await this.readStalledCount(req.conversation_id);
+      const collected = await this.runPipeline(req, ctx, stalledCountIncoming);
+      await this.persistStalledCount(req.conversation_id, collected);
       return this.buildResult(req, ctx, collected, start);
     } catch (e) {
       const err = e as Error;
@@ -80,20 +84,61 @@ export class ReplyService {
 
   // ───────── internals ─────────
 
-  private buildOrchestratorInput(req: ReplyRequestDto, ctx: ContextPacket) {
+  private buildOrchestratorInput(req: ReplyRequestDto, ctx: ContextPacket, stalledCountIncoming: number) {
     return {
       ctx,
       message: req.message.content,
       customerContext: buildCustomerContext(ctx.history),
       priorAssistantLang: inferPriorAssistantLang(ctx.history),
       priorAgentQuestion: inferPriorAgentQuestion(ctx.history),
-      stalledCountIncoming: computeStalledCount(ctx.history),
+      stalledCountIncoming,
     };
   }
 
-  private async runPipeline(req: ReplyRequestDto, ctx: ContextPacket): Promise<CollectedTurn> {
+  // ─── Stalled-count persistence ──────────────────────────────────────────────
+  // The triage rule escalates after 2 consecutive non-progressing replies on the
+  // same ask. That only works if the prior turn's stalled_count is fed back in.
+  // History can't carry it (bot messages persist no metadata), so we keep a small
+  // per-conversation counter in Redis: read it before triage, write triage's new
+  // stalled_count after the turn. Missing conversation_id or Redis errors degrade
+  // safely to 0 (never a false escalation).
+  private stalledKey(conversationId?: string): string | null {
+    return conversationId ? `stalled:${conversationId}` : null;
+  }
+
+  private async readStalledCount(conversationId?: string): Promise<number> {
+    const key = this.stalledKey(conversationId);
+    if (!key) return 0;
+    try {
+      const raw = await this.redis.raw().get(key);
+      const n = raw ? Number.parseInt(raw, 10) : 0;
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async persistStalledCount(conversationId: string | undefined, c: CollectedTurn): Promise<void> {
+    const key = this.stalledKey(conversationId);
+    if (!key) return;
+    const triage = c.triage ?? c.done?.triage;
+    const count = typeof triage?.stalled_count === 'number' ? triage.stalled_count : 0;
+    try {
+      await this.redis.raw().set(key, String(count), 'EX', 3600);
+    } catch {
+      // non-fatal — worst case the next turn starts from 0
+    }
+  }
+
+  private async runPipeline(
+    req: ReplyRequestDto,
+    ctx: ContextPacket,
+    stalledCountIncoming: number,
+  ): Promise<CollectedTurn> {
     const collected: CollectedTurn = {};
-    for await (const ev of this.orchestrator.streamTurn(this.buildOrchestratorInput(req, ctx))) {
+    for await (const ev of this.orchestrator.streamTurn(
+      this.buildOrchestratorInput(req, ctx, stalledCountIncoming),
+    )) {
       absorbEvent(ev, collected);
     }
     return collected;
@@ -124,10 +169,15 @@ export class ReplyService {
     const lastViolations = lastAttempt?.verdict?.violations?.map((v) => v.rule_name) ?? [];
     const violations = lastAttempt?.verdict?.violations ?? [];
 
+    // metadata_valid is the order/lead-data trustworthiness signal — independent
+    // of reply-text rules. Defaults to true when no verdict (nothing to invalidate).
+    const metadataValid = lastAttempt?.verdict?.metadata_valid !== false;
+
     const baseTurnLog: Omit<AiTurnLogData, 'status'> = {
       triage: (triage ?? {}) as object,
       attempts: (done?.attempts ?? []) as unknown as object,
       validatorPass,
+      metadataValid,
       retryCount: Math.max(0, (done?.attempts?.length ?? 1) - 1),
       highSeverityViolations: highCount(violations),
       intentPath: triage?.intent_path ?? null,
@@ -234,6 +284,7 @@ function buildOutsideHoursTurnLog(
     triage: {},
     attempts: [],
     validatorPass: false,
+    metadataValid: true,
     retryCount: 0,
     highSeverityViolations: 0,
     intentPath: null,
@@ -270,19 +321,6 @@ function inferPriorAgentQuestion(history: IncomingHistoryMessage[]): string | nu
   return null;
 }
 
-/**
- * Count consecutive assistant turns at the tail of history with no customer
- * reply in between. Tells the triage stage how long the bot has been
- * waiting for a response — used to detect and handle stalled conversations.
- */
-function computeStalledCount(history: IncomingHistoryMessage[]): number {
-  let count = 0;
-  for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].role === 'assistant') count++;
-    else break;
-  }
-  return count;
-}
 
 /**
  * Merge extracted_data from all prior assistant turns into a single object.

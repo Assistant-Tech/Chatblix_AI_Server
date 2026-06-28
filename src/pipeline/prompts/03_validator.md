@@ -119,7 +119,7 @@ If a price appears without any of those, violation.
 - A different product is now in scope
 - A discount is being applied
 - Customer pushed back on price and the reply is justifying
-- `TRIAGE.closing_state.stage == 3` — the Stage 3 final confirmation bullet summary is explicitly allowed to include the price once as part of the order recap
+- The reply is a Stage 3 final-confirmation order recap — recognised by ANY of: `TRIAGE.closing_state.stage == 3`, `metadata.next_step == "await_payment"`, `metadata.order_confirmed == true`, or a `stage_3`/`final_confirmation` tag. The bullet summary is explicitly allowed to include the price once as part of the recap.
 
 ### Rule 5 — no_padding_with_known_facts (MEDIUM)
 

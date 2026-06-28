@@ -6,6 +6,10 @@ export interface AiTurnLogData {
   triage: object;
   attempts: object;
   validatorPass: boolean;
+  // Whether the structured <metadata> (order/lead data) passed the validator's
+  // metadata checks. Decoupled from validatorPass so order placement can depend
+  // on data validity, not on reply-text style violations.
+  metadataValid: boolean;
   retryCount: number;
   highSeverityViolations: number;
   intentPath: string | null;
