@@ -66,6 +66,22 @@ export interface OpenRouterMessage {
   name?: string;
 }
 
+/**
+ * Build a `system` message whose content carries an `ephemeral` cache breakpoint
+ * so providers that support prompt caching (Anthropic via OpenRouter) cache the
+ * stable system prefix instead of re-billing it on every call.
+ *
+ * Exported because callers that assemble their own `messages` array (e.g. the
+ * generator's tool loop) must mark the system block themselves — passing
+ * `overrideMessages` bypasses the client's internal wrapping.
+ */
+export function cachedSystemMessage(text: string): OpenRouterMessage {
+  return {
+    role: 'system',
+    content: [{ type: 'text', text, cache_control: { type: 'ephemeral' } }],
+  };
+}
+
 export type ChatStreamEvent =
   | { type: 'content'; text: string }
   | { type: 'tool_call'; id: string; name: string; arguments: string }
@@ -89,16 +105,7 @@ export class OpenRouterClient {
   }
 
   private systemMessage(text: string): OpenRouterMessage {
-    return {
-      role: 'system',
-      content: [
-        {
-          type: 'text',
-          text,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-    };
+    return cachedSystemMessage(text);
   }
 
   private userMessage(text: string): OpenRouterMessage {

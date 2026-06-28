@@ -5,6 +5,7 @@ import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isTriageShape } from '../common/utils/pipeline/contracts';
 import { synthesizeFallbackTriage } from '../common/utils/pipeline/triage-fallback';
+import { slimProfileForContext } from './profile-context';
 import type { ChatJsonUsage } from './openrouter.client';
 import type {
   ContextPacket,
@@ -44,7 +45,7 @@ export class TriageService {
       `LATEST_MESSAGE: ${message}`,
       `CONVERSATION_HISTORY: ${JSON.stringify(ctx.history || [])}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
-      `BUSINESS_CONTEXT: ${JSON.stringify(ctx.profile)}`,
+      `BUSINESS_CONTEXT: ${JSON.stringify(slimProfileForContext(ctx.profile))}`,
       `PRIOR_ASSISTANT_LANGUAGE: ${priorAssistantLang || 'null'}`,
       `PRIOR_AGENT_QUESTION: ${priorAgentQuestion ? JSON.stringify(priorAgentQuestion) : 'null'}`,
       `STALLED_COUNT_INCOMING: ${stalledCountIncoming || 0}`,

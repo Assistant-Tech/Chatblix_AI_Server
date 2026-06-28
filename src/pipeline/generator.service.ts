@@ -3,7 +3,7 @@ import { AppConfigService } from '../config/app-config.service';
 import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { selectToolsForProfile } from './tools.registry';
-import { OpenRouterMessage, ChatStreamEvent } from './openrouter.client';
+import { OpenRouterMessage, ChatStreamEvent, cachedSystemMessage } from './openrouter.client';
 import { MetricsService } from './metrics.service';
 import type {
   ContextPacket,
@@ -73,8 +73,12 @@ export class GeneratorService {
     let chunkCount = 0;
     let totalLen = 0;
 
+    // Cache the (large, stable) system prefix. Without this, the generator's
+    // ~19k-token prompt was re-billed in full on every call, every retry, and
+    // every tool-loop iteration — it bypassed the client's caching because it
+    // hands the client a pre-built `messages` array (overrideMessages path).
     const messages: OpenRouterMessage[] = [
-      { role: 'system', content: system },
+      cachedSystemMessage(system),
       { role: 'user', content: user }
     ];
 

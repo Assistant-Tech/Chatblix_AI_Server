@@ -4,6 +4,7 @@ import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isVerdictShape } from '../common/utils/pipeline/contracts';
+import { slimProfileForContext } from './profile-context';
 import type { ChatJsonUsage } from './openrouter.client';
 import type {
   ContextPacket,
@@ -42,7 +43,7 @@ export class ValidatorService {
       `LATEST_MESSAGE: ${message}`,
       `CONVERSATION_HISTORY: ${JSON.stringify(ctx.history || [])}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
-      `BUSINESS_CONTEXT: ${JSON.stringify(ctx.profile)}`,
+      `BUSINESS_CONTEXT: ${JSON.stringify(slimProfileForContext(ctx.profile))}`,
       `TRIAGE: ${JSON.stringify(triage)}`,
       `CANDIDATE: ${candidate}`,
     ].join('\n\n');
