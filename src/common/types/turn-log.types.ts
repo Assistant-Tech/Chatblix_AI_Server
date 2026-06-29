@@ -16,7 +16,13 @@ export interface AiTurnLogData {
   language: string | null;
   toolsCalled: string[];
   shipped: string;
+  // tokensIn is the RAW prompt-token sum across all calls in the turn (it does
+  // NOT shrink with caching). cachedIn = prompt tokens served from cache (billed
+  // ~0.1×); tokensInBilled = billed-equivalent input (uncached + cached×0.1) —
+  // this is the number that reflects actual cost.
   tokensIn: number | null;
+  cachedIn: number | null;
+  tokensInBilled: number | null;
   tokensOut: number | null;
   durationMs: number;
   traceId: string | null;

@@ -86,13 +86,32 @@ export class LLMClientService {
   async *chatStream(opts: ChatStreamOptions, callCtx: CallContext = {}): AsyncGenerator<ChatStreamEvent> {
     const start = Date.now();
     let firstChunkSeen = false;
+    let lastUsage: Extract<ChatStreamEvent, { type: 'usage' }> | null = null;
 
     try {
       for await (const chunk of this.upstream.chatStream(opts)) {
         firstChunkSeen = true;
+        if (chunk.type === 'usage') lastUsage = chunk;
         yield chunk;
       }
-      this.logCall(opts.model, callCtx, start, null);
+      // Stream calls report usage in a trailing frame; surface it so the
+      // generator (which streams) is no longer a tokens_in=- blind spot.
+      this.logCall(
+        opts.model,
+        callCtx,
+        start,
+        lastUsage
+          ? {
+              text: '',
+              raw: null,
+              usage: {
+                prompt_tokens: lastUsage.promptTokens,
+                completion_tokens: lastUsage.completionTokens,
+                cached_tokens: lastUsage.cachedTokens ?? null,
+              },
+            }
+          : null,
+      );
     } catch (e) {
       if (firstChunkSeen) {
         // Already yielded data — surface the error as-is; retrying would duplicate.
@@ -167,10 +186,17 @@ export class LLMClientService {
     const usage: ChatJsonUsage | null = result?.usage ?? null;
     const tokensIn = usage?.prompt_tokens ?? null;
     const tokensOut = usage?.completion_tokens ?? null;
+    const cached = usage?.cached_tokens ?? null;
+    // Approx billed input: cache reads bill ~0.1×, the rest at 1×. This is the
+    // number that actually matters — `tokens_in` is the raw prompt size and never
+    // shrinks from caching. (Ignores the one-time ~1.25× cache-write premium.)
+    const billedIn =
+      tokensIn != null ? Math.round(tokensIn - (cached ?? 0) * 0.9) : null;
     this.logger.log(
       `llm.ok stage=${callCtx.stage ?? '-'} model=${model} ` +
         `business_id=${callCtx.business_id ?? '-'} trace_id=${callCtx.trace_id ?? '-'} ` +
-        `latency_ms=${latencyMs} tokens_in=${tokensIn ?? '-'} tokens_out=${tokensOut ?? '-'}`,
+        `latency_ms=${latencyMs} tokens_in=${tokensIn ?? '-'} tokens_out=${tokensOut ?? '-'} ` +
+        `cached_in=${cached ?? '-'} billed_in=${billedIn ?? '-'}`,
     );
   }
 }

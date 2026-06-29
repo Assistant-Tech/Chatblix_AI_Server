@@ -1,0 +1,17 @@
+{
+  "name": "price-not-volunteered-on-evaluation",
+  "description": "When the customer evaluates an already-recommended product (no price ask), the reply must NOT volunteer a price (Rule 3) and should pass validation.",
+  "stages": ["triage", "generator", "validator"],
+  "input": {
+    "message": "tyo ramro cha?",
+    "history": [
+      { "role": "user", "content": "pimple ko lagi kei cha?", "timestamp": "2026-01-01T00:00:00Z" },
+      { "role": "assistant", "content": "Neem Soap try garnu hola hajur, oily skin lai suit garcha.", "timestamp": "2026-01-01T00:00:05Z" }
+    ]
+  },
+  "expect": {
+    "triage": { "fields": { "intent_path": "evaluation_question" } },
+    "reply": { "notMatches": ["NPR", "\\bRs\\b", "499"] },
+    "validator": { "pass": true }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "triage-delivery-availability-not-buying",
+  "description": "Asking IF home delivery is offered (question form + delivery word) is direct_factual, NOT buying_signal. Protects the C2 disambiguation.",
+  "stages": ["triage"],
+  "input": {
+    "message": "home delivery hudaina?",
+    "priorAssistantLang": "romanized_ne",
+    "history": [
+      { "role": "assistant", "content": "Neem Soap ramro cha hajur.", "timestamp": "2026-01-01T00:00:00Z" }
+    ]
+  },
+  "expect": { "triage": { "fields": { "intent_path": "direct_factual", "buying_signal": false } } }
+}

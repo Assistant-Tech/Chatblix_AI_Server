@@ -43,6 +43,9 @@ export interface ChatJsonOptions {
 export interface ChatJsonUsage {
   prompt_tokens: number | null;
   completion_tokens: number | null;
+  // Portion of prompt_tokens served from the prompt cache (billed ~0.1×).
+  // Lets us confirm caching is actually working. null when the provider omits it.
+  cached_tokens?: number | null;
 }
 
 export interface ChatJsonResult {
@@ -85,7 +88,7 @@ export function cachedSystemMessage(text: string): OpenRouterMessage {
 export type ChatStreamEvent =
   | { type: 'content'; text: string }
   | { type: 'tool_call'; id: string; name: string; arguments: string }
-  | { type: 'usage'; promptTokens: number | null; completionTokens: number | null };
+  | { type: 'usage'; promptTokens: number | null; completionTokens: number | null; cachedTokens?: number | null };
 
 @Injectable()
 export class OpenRouterClient {
@@ -176,9 +179,22 @@ export class OpenRouterClient {
     if (typeof text !== 'string') {
       throw new OpenRouterError('OpenRouter returned no content', 'no_content', undefined, json);
     }
-    const rawUsage = json?.usage as { prompt_tokens?: number; completion_tokens?: number } | null | undefined;
+    const rawUsage = json?.usage as
+      | {
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          cached_tokens?: number;
+          prompt_tokens_details?: { cached_tokens?: number };
+        }
+      | null
+      | undefined;
     const usage: ChatJsonUsage | null = rawUsage
-      ? { prompt_tokens: rawUsage.prompt_tokens ?? null, completion_tokens: rawUsage.completion_tokens ?? null }
+      ? {
+          prompt_tokens: rawUsage.prompt_tokens ?? null,
+          completion_tokens: rawUsage.completion_tokens ?? null,
+          cached_tokens:
+            rawUsage.prompt_tokens_details?.cached_tokens ?? rawUsage.cached_tokens ?? null,
+        }
       : null;
     return { text, raw: json, usage };
   }
@@ -246,7 +262,7 @@ export class OpenRouterClient {
     const decoder = new TextDecoder();
     let buf = '';
     let activeToolCall: { id: string; name: string; arguments: string } | null = null;
-    let lastUsage: { promptTokens: number | null; completionTokens: number | null } | null = null;
+    let lastUsage: { promptTokens: number | null; completionTokens: number | null; cachedTokens: number | null } | null = null;
 
     try {
       while (true) {
@@ -283,6 +299,10 @@ export class OpenRouterClient {
               lastUsage = {
                 promptTokens: parsed.usage.prompt_tokens ?? null,
                 completionTokens: parsed.usage.completion_tokens ?? null,
+                cachedTokens:
+                  parsed.usage.prompt_tokens_details?.cached_tokens ??
+                  parsed.usage.cached_tokens ??
+                  null,
               };
             }
             const delta = parsed?.choices?.[0]?.delta;

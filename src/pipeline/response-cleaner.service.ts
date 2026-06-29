@@ -24,6 +24,19 @@ export class ResponseCleanerService {
     // Collapse runs of 3+ blank lines into a single blank line.
     out = out.replace(/\n{3,}/g, '\n\n');
 
+    out = this.normalizeTypography(out);
+
     return out.trim();
+  }
+
+  /**
+   * Normalize typography the reply contract forbids: em-dash (U+2014) and
+   * en-dash (U+2013) → plain hyphen. Doing this deterministically means a stray
+   * dash from the model never trips validator Rule 1 and forces a full (and
+   * costly) regeneration — the fix is one character, not a retry round-trip.
+   */
+  normalizeTypography(raw: string): string {
+    if (!raw) return raw;
+    return raw.replace(/[—–]/g, '-');
   }
 }

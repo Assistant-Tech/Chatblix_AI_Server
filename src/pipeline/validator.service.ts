@@ -4,7 +4,6 @@ import { LLMClientService } from './llm-client.service';
 import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isVerdictShape } from '../common/utils/pipeline/contracts';
-import { slimProfileForContext } from './profile-context';
 import { compactHistory } from './history-context';
 import type { ChatJsonUsage } from './openrouter.client';
 import type {
@@ -49,6 +48,7 @@ export interface ValidatorCallResult {
   verdict: Verdict;
   tokensIn: number | null;
   tokensOut: number | null;
+  cachedIn: number | null;
 }
 
 export interface CallValidatorInput {
@@ -76,7 +76,9 @@ export class ValidatorService {
       `LATEST_MESSAGE: ${message}`,
       `CONVERSATION_HISTORY: ${JSON.stringify(compactHistory(ctx.history))}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
-      `BUSINESS_CONTEXT: ${JSON.stringify(slimProfileForContext(ctx.profile))}`,
+      // BUSINESS_CONTEXT is intentionally NOT sent here: the compiled business
+      // profile is already prepended to the system prompt (the `##` sections),
+      // the single source of truth for fact-checking (Rule 8/18/25). See Phase 2.6.
       `TRIAGE: ${JSON.stringify(triage)}`,
       `CANDIDATE: ${candidate}`,
     ].join('\n\n');
@@ -104,7 +106,7 @@ export class ValidatorService {
         `validator prompt load failed business_id=${input.ctx.business_id} trace_id=${input.ctx.trace_id ?? '-'}: ${(e as Error).message}`,
       );
       this.metrics.bump('validator_soft_pass_on_error');
-      return { verdict: this.softPass(`prompt_load_failed:${(e as Error).message}`), tokensIn: null, tokensOut: null };
+      return { verdict: this.softPass(`prompt_load_failed:${(e as Error).message}`), tokensIn: null, tokensOut: null, cachedIn: null };
     }
 
     if (input.ctx.systemPrompt) {
@@ -135,7 +137,7 @@ export class ValidatorService {
       if (err?.kind === 'timeout') this.metrics.bump('validator_timeout');
       else this.metrics.bump('validator_api_error');
       this.metrics.bump('validator_soft_pass_on_error');
-      return { verdict: this.softPass(err?.kind ?? 'api_error'), tokensIn: null, tokensOut: null };
+      return { verdict: this.softPass(err?.kind ?? 'api_error'), tokensIn: null, tokensOut: null, cachedIn: null };
     }
 
     const parsed = extractJsonObject(response.text);
@@ -145,6 +147,7 @@ export class ValidatorService {
         verdict: this.softPass(parsed ? 'schema_invalid' : 'json_parse_failed'),
         tokensIn: null,
         tokensOut: null,
+        cachedIn: null,
       };
     }
 
@@ -179,6 +182,7 @@ export class ValidatorService {
       verdict: parsed,
       tokensIn: response.usage?.prompt_tokens ?? null,
       tokensOut: response.usage?.completion_tokens ?? null,
+      cachedIn: response.usage?.cached_tokens ?? null,
     };
   }
 }

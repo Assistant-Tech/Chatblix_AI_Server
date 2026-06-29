@@ -1,0 +1,13 @@
+{
+  "name": "triage-confusion-literal",
+  "description": "A literal not-understood signal routes to confusion (protects the confusion disambiguation).",
+  "stages": ["triage"],
+  "input": {
+    "message": "bujhena, k bhaneko hajur?",
+    "priorAssistantLang": "romanized_ne",
+    "history": [
+      { "role": "assistant", "content": "Combo ma Neem Soap + Aloe Gel NPR 799 ma milcha hajur.", "timestamp": "2026-01-01T00:00:00Z" }
+    ]
+  },
+  "expect": { "triage": { "fields": { "intent_path": "confusion" } } }
+}

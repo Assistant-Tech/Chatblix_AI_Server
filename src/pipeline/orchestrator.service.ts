@@ -117,6 +117,10 @@ export class PipelineOrchestratorService {
     const { triage } = triageResult;
     let accTokensIn = triageResult.tokensIn ?? 0;
     let accTokensOut = triageResult.tokensOut ?? 0;
+    // Sum of prompt tokens served from cache (billed ~0.1×). Lets the turn log
+    // report real (billed-equivalent) cost, not just the raw prompt size which
+    // never shrinks from caching.
+    let accCachedIn = triageResult.cachedIn ?? 0;
     yield { event: 'triage', data: triage };
 
     // --- Stage 1.5: Escalation rules (keyword + triage handoff). Short-circuits the generator. ---
@@ -145,6 +149,8 @@ export class PipelineOrchestratorService {
         duration_ms: Date.now() - tStart,
         tokensIn: accTokensIn || null,
         tokensOut: accTokensOut || null,
+        cachedIn: accCachedIn || null,
+        tokensInBilled: accTokensIn ? Math.round(accTokensIn - accCachedIn * 0.9) : null,
         tools_called: toolsCalled,
       };
       yield { event: '_done_internal', data: done };
@@ -208,6 +214,7 @@ export class PipelineOrchestratorService {
               // its own usage; accumulate so tool-using turns are billed in full.
               accTokensIn += chunk.promptTokens ?? 0;
               accTokensOut += chunk.completionTokens ?? 0;
+              accCachedIn += chunk.cachedTokens ?? 0;
             } else if (chunk.type === 'content') {
               // A tool call is terminal for this pass — ignore any trailing content.
               if (pendingToolCall) continue;
@@ -370,6 +377,13 @@ export class PipelineOrchestratorService {
         candidate = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
       }
 
+      // Deterministically fix forbidden typography (em/en dashes → hyphen) BEFORE
+      // validation. A stray em-dash from the model would otherwise trip validator
+      // Rule 1 (HIGH) and force a full regeneration — an entire extra generator +
+      // validator round — to remove a single character. This also normalizes the
+      // shipped reply, since `shipped` derives from this candidate.
+      candidate = this.cleaner.normalizeTypography(candidate);
+
       // Conditional validation (opt-in via PIPELINE_VALIDATE_RISKY_ONLY): skip the
       // validator LLM on clearly low-risk turns. The cheap, local tone + safety
       // checks still run via composeVerdict, so a PII/banned-phrase leak can still
@@ -398,6 +412,7 @@ export class PipelineOrchestratorService {
         });
         accTokensIn += validatorResult.tokensIn ?? 0;
         accTokensOut += validatorResult.tokensOut ?? 0;
+        accCachedIn += validatorResult.cachedIn ?? 0;
 
         // Compose tone + safety violations on top of the validator verdict.
         composed = this.composeVerdict(candidate, ctx.profile, validatorResult.verdict);
@@ -477,6 +492,8 @@ export class PipelineOrchestratorService {
       duration_ms: Date.now() - tStart,
       tokensIn: accTokensIn || null,
       tokensOut: accTokensOut || null,
+      cachedIn: accCachedIn || null,
+      tokensInBilled: accTokensIn ? Math.round(accTokensIn - accCachedIn * 0.9) : null,
       tools_called: toolsCalled,
     };
     if (toolsCalled.length > 0) {

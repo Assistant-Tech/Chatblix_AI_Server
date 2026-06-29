@@ -1,0 +1,11 @@
+{
+  "name": "factual-delivery-answered",
+  "description": "A direct factual delivery question gets a substantive answer that passes validation.",
+  "stages": ["triage", "generator", "validator"],
+  "input": { "message": "Kathmandu ma delivery huncha?" },
+  "expect": {
+    "triage": { "fields": { "intent_path": "direct_factual" } },
+    "reply": { "minWords": 2 },
+    "validator": { "pass": true }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "validator-emdash-normalized",
+  "description": "A reply containing an em-dash must NOT trip Rule 1 — the orchestrator normalizes em/en dashes to hyphens before validation, so no wasteful regeneration. Reproduces the prod scenario (trace 9c2ea9f2). Candidate is in the business default language to isolate the dash check.",
+  "stages": ["triage", "validator"],
+  "input": {
+    "message": "Namaste",
+    "priorAssistantLang": "romanized_ne",
+    "candidate": "<reply>Namaste hajur — skin ko lagi kei chahiyo?</reply><metadata>{\"lead_score\":20,\"stage\":\"cold\",\"intent\":\"inquiry\",\"extracted_data\":{\"name\":null,\"phone\":null,\"email\":null,\"location\":null,\"product_interest\":null,\"budget_range\":null,\"timeline\":null,\"objections\":null},\"next_step\":\"qualify\",\"suggested_reply_language\":\"romanized_ne\",\"handoff_required\":false,\"handoff_context\":null,\"tags\":[\"greeting\"]}</metadata>"
+  },
+  "expect": {
+    "reply": { "notMatches": ["—", "–"] },
+    "validator": { "pass": true, "passesRules": [1] }
+  }
+}

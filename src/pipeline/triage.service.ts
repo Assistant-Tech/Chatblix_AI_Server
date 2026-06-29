@@ -5,7 +5,6 @@ import { PromptsService } from './prompts.service';
 import { MetricsService } from './metrics.service';
 import { extractJsonObject, isTriageShape } from '../common/utils/pipeline/contracts';
 import { synthesizeFallbackTriage } from '../common/utils/pipeline/triage-fallback';
-import { slimProfileForContext } from './profile-context';
 import { compactHistory } from './history-context';
 import type { ChatJsonUsage } from './openrouter.client';
 import type {
@@ -18,6 +17,7 @@ export interface TriageCallResult {
   triage: Triage;
   tokensIn: number | null;
   tokensOut: number | null;
+  cachedIn: number | null;
 }
 
 export interface CallTriageInput {
@@ -46,7 +46,10 @@ export class TriageService {
       `LATEST_MESSAGE: ${message}`,
       `CONVERSATION_HISTORY: ${JSON.stringify(compactHistory(ctx.history))}`,
       `CUSTOMER_CONTEXT: ${JSON.stringify(customerContext || {})}`,
-      `BUSINESS_CONTEXT: ${JSON.stringify(slimProfileForContext(ctx.profile))}`,
+      // BUSINESS_CONTEXT is intentionally NOT sent here: the compiled business
+      // profile is already prepended to the system prompt (the `##` sections),
+      // which is the single source of truth. The generator has always worked this
+      // way; triage/validator now match it. See docs Phase 2.6.
       `PRIOR_ASSISTANT_LANGUAGE: ${priorAssistantLang || 'null'}`,
       `PRIOR_AGENT_QUESTION: ${priorAgentQuestion ? JSON.stringify(priorAgentQuestion) : 'null'}`,
       `STALLED_COUNT_INCOMING: ${stalledCountIncoming || 0}`,
@@ -93,6 +96,7 @@ export class TriageService {
         }),
         tokensIn: null,
         tokensOut: null,
+        cachedIn: null,
       };
     }
 
@@ -130,6 +134,7 @@ export class TriageService {
         }),
         tokensIn: null,
         tokensOut: null,
+        cachedIn: null,
       };
     }
 
@@ -150,6 +155,7 @@ export class TriageService {
         }),
         tokensIn: null,
         tokensOut: null,
+        cachedIn: null,
       };
     }
 
@@ -157,6 +163,7 @@ export class TriageService {
       triage: parsed,
       tokensIn: response.usage?.prompt_tokens ?? null,
       tokensOut: response.usage?.completion_tokens ?? null,
+      cachedIn: response.usage?.cached_tokens ?? null,
     };
   }
 }

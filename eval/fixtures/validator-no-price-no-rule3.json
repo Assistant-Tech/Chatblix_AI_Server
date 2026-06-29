@@ -1,0 +1,17 @@
+{
+  "name": "validator-no-price-no-rule3",
+  "description": "An evaluation-question answer with NO price must NOT trip Rule 3 (no_price_unless_asked only applies when a price actually appears). Deterministic (fixed candidate).",
+  "stages": ["triage", "validator"],
+  "input": {
+    "message": "tyo ramro cha?",
+    "priorAssistantLang": "romanized_ne",
+    "history": [
+      { "role": "user", "content": "pimple ko lagi kei cha?", "timestamp": "2026-01-01T00:00:00Z" },
+      { "role": "assistant", "content": "Neem Soap try garnu hola hajur, oily skin lai suit garcha.", "timestamp": "2026-01-01T00:00:05Z" }
+    ],
+    "candidate": "<reply>Ho hajur, daily lagaunu 2-3 hapta ma majjale farak dekhincha. Regular customer le man parai linchha.</reply><metadata>{\"lead_score\":45,\"stage\":\"warm\",\"intent\":\"inquiry\",\"extracted_data\":{\"name\":null,\"phone\":null,\"email\":null,\"location\":null,\"product_interest\":\"Neem Soap\",\"budget_range\":null,\"timeline\":null,\"objections\":null},\"next_step\":\"recommend\",\"suggested_reply_language\":\"romanized_ne\",\"handoff_required\":false,\"handoff_context\":null,\"tags\":[\"evaluation_question\"]}</metadata>"
+  },
+  "expect": {
+    "validator": { "pass": true, "passesRules": [3] }
+  }
+}

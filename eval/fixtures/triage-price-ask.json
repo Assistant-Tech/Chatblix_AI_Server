@@ -1,0 +1,7 @@
+{
+  "name": "triage-named-product-price-ask",
+  "description": "Asking a product's price routes to named_product_price_ask.",
+  "stages": ["triage"],
+  "input": { "message": "Neem soap kati ho?" },
+  "expect": { "triage": { "fields": { "intent_path": "named_product_price_ask" } } }
+}

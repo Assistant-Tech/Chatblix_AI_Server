@@ -1,0 +1,13 @@
+{
+  "name": "validator-first-close-allowed",
+  "description": "A first close on a concern recommendation with NO prior pitch and NO price must NOT trip Rule 3 (no-price) or Rule 31 (repeat-close). Deterministic (fixed candidate).",
+  "stages": ["triage", "validator"],
+  "input": {
+    "message": "pimple ko lagi kei cha hajur?",
+    "priorAssistantLang": "romanized_ne",
+    "candidate": "<reply>Pimple ko lagi Neem Soap ramro huncha hajur, hamro bestseller wala ni ho. Daily wash ma lagaunu, 2-3 hapta ma majjale farak dekhincha. Order garne ho?</reply><metadata>{\"lead_score\":40,\"stage\":\"warm\",\"intent\":\"inquiry\",\"extracted_data\":{\"name\":null,\"phone\":null,\"email\":null,\"location\":null,\"product_interest\":\"Neem Soap\",\"budget_range\":null,\"timeline\":null,\"objections\":null},\"next_step\":\"recommend\",\"suggested_reply_language\":\"romanized_ne\",\"handoff_required\":false,\"handoff_context\":null,\"tags\":[\"concern\"]}</metadata>"
+  },
+  "expect": {
+    "validator": { "pass": true, "passesRules": [3, 31] }
+  }
+}

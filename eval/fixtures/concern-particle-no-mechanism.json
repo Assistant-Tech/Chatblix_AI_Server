@@ -1,0 +1,17 @@
+{
+  "name": "concern-particle-no-mechanism-claim",
+  "description": "A concern recommendation should use a Nepali shopkeeper particle and must NOT make a mechanism/medical claim (protects particle guidance + Rule 25 after slimming).",
+  "stages": ["triage", "generator", "validator"],
+  "input": {
+    "message": "pimple ko lagi kei cha hajur?",
+    "priorAssistantLang": "romanized_ne"
+  },
+  "expect": {
+    "triage": { "fields": { "intent_path": "concern" } },
+    "reply": {
+      "matches": ["\\b(ni|hai|hola|ta|majjale|nai)\\b"],
+      "notMatches": ["anti-bacterial", "pH balance", "deep cleansing", "cures?", "clinically"]
+    },
+    "validator": { "pass": true }
+  }
+}

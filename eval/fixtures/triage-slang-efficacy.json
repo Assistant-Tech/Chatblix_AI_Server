@@ -1,0 +1,14 @@
+{
+  "name": "triage-slang-efficacy-evaluation",
+  "description": "Efficacy slang after a recommendation routes to evaluation_question. Protects the NEPALI SLANG recognition section.",
+  "stages": ["triage"],
+  "input": {
+    "message": "majjale jaanxa hai?",
+    "priorAssistantLang": "romanized_ne",
+    "history": [
+      { "role": "user", "content": "pimple ko lagi kei cha?", "timestamp": "2026-01-01T00:00:00Z" },
+      { "role": "assistant", "content": "Neem Soap try garnu hola hajur, oily skin lai suit garcha.", "timestamp": "2026-01-01T00:00:05Z" }
+    ]
+  },
+  "expect": { "triage": { "fields": { "intent_path": "evaluation_question", "buying_signal": false } } }
+}

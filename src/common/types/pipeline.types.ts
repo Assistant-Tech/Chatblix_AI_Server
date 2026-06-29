@@ -155,5 +155,9 @@ export interface DoneInternalData {
   duration_ms: number;
   tokensIn: number | null;
   tokensOut: number | null;
+  // Prompt tokens served from cache, and the billed-equivalent input
+  // (uncached + cached×0.1). tokensIn stays the raw sum for backwards-compat.
+  cachedIn: number | null;
+  tokensInBilled: number | null;
   tools_called: string[];
 }

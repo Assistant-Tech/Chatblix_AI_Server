@@ -1,0 +1,83 @@
+{
+  "concern-particle-no-mechanism-claim": {
+    "ok": true,
+    "intent_path": "concern",
+    "validatorPass": true,
+    "violationRuleIds": []
+  },
+  "factual-delivery-answered": {
+    "ok": true,
+    "intent_path": "direct_factual",
+    "validatorPass": true,
+    "violationRuleIds": [
+      33
+    ]
+  },
+  "medical-no-cure-claim": {
+    "ok": true,
+    "intent_path": "medical_mention",
+    "validatorPass": false,
+    "violationRuleIds": [
+      11
+    ]
+  },
+  "price-not-volunteered-on-evaluation": {
+    "ok": true,
+    "intent_path": "evaluation_question",
+    "validatorPass": true,
+    "violationRuleIds": [
+      25,
+      33
+    ]
+  },
+  "triage-authenticity-check": {
+    "ok": true,
+    "intent_path": "authenticity_check"
+  },
+  "triage-bargain": {
+    "ok": true,
+    "intent_path": "bargain"
+  },
+  "triage-confusion-literal": {
+    "ok": true,
+    "intent_path": "confusion"
+  },
+  "triage-delivery-availability-not-buying": {
+    "ok": true,
+    "intent_path": "direct_factual"
+  },
+  "triage-greeting": {
+    "ok": true,
+    "intent_path": "greeting"
+  },
+  "triage-language-inheritance-phone": {
+    "ok": true,
+    "intent_path": "buying_signal"
+  },
+  "triage-named-product-price-ask": {
+    "ok": true,
+    "intent_path": "named_product_price_ask"
+  },
+  "triage-slang-efficacy-evaluation": {
+    "ok": true,
+    "intent_path": "evaluation_question"
+  },
+  "validator-emdash-normalized": {
+    "ok": true,
+    "intent_path": "greeting",
+    "validatorPass": true,
+    "violationRuleIds": []
+  },
+  "validator-first-close-allowed": {
+    "ok": true,
+    "intent_path": "concern",
+    "validatorPass": true,
+    "violationRuleIds": []
+  },
+  "validator-no-price-no-rule3": {
+    "ok": true,
+    "intent_path": "evaluation_question",
+    "validatorPass": true,
+    "violationRuleIds": []
+  }
+}

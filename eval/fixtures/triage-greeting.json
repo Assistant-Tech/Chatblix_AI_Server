@@ -1,0 +1,7 @@
+{
+  "name": "triage-greeting",
+  "description": "A plain greeting classifies as greeting (low-risk; eligible to skip validation).",
+  "stages": ["triage"],
+  "input": { "message": "Namaste" },
+  "expect": { "triage": { "fields": { "intent_path": "greeting" } } }
+}

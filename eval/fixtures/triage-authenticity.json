@@ -1,0 +1,13 @@
+{
+  "name": "triage-authenticity-check",
+  "description": "Genuineness doubt routes to authenticity_check.",
+  "stages": ["triage"],
+  "input": {
+    "message": "original ho? fake ta haina?",
+    "priorAssistantLang": "romanized_ne",
+    "history": [
+      { "role": "assistant", "content": "Vitamin C Serum ramro cha hajur.", "timestamp": "2026-01-01T00:00:00Z" }
+    ]
+  },
+  "expect": { "triage": { "fields": { "intent_path": "authenticity_check" } } }
+}

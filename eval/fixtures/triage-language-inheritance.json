@@ -1,0 +1,13 @@
+{
+  "name": "triage-language-inheritance-phone",
+  "description": "A pure phone number carries no language signal and inherits the prior assistant language.",
+  "stages": ["triage"],
+  "input": {
+    "message": "9812345678",
+    "priorAssistantLang": "romanized_ne",
+    "history": [
+      { "role": "assistant", "content": "Phone number bhanidinu hola hajur.", "timestamp": "2026-01-01T00:00:00Z" }
+    ]
+  },
+  "expect": { "triage": { "fields": { "language.detected": "romanized_ne" } } }
+}
