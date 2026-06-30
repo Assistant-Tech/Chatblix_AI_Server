@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { AppConfigService } from '../config/app-config.service';
-import { HoursService } from '../pipeline/hours.service';
 import { PipelineOrchestratorService } from '../pipeline/orchestrator.service';
 import { SystemPromptCompilerService } from '../business/system-prompt-compiler.service';
 import { parseAgentOutput } from '../common/utils/parser';
@@ -19,7 +18,6 @@ export class SandboxService {
 
   constructor(
     private readonly orchestrator: PipelineOrchestratorService,
-    private readonly hours: HoursService,
     private readonly compiler: SystemPromptCompilerService,
     private readonly config: AppConfigService,
   ) {}
@@ -27,17 +25,9 @@ export class SandboxService {
   async stream(dto: SandboxRequestDto, res: Response): Promise<void> {
     const start = Date.now();
 
-    if (!this.hours.isWithinHours(dto.profile)) {
-      sse(res, 'status', { type: 'outside_hours' });
-      sse(res, 'done', {
-        status: 'outside_hours',
-        reply: this.hours.holidayMessage(dto.profile),
-        latency_ms: Date.now() - start,
-      });
-      res.end();
-      return;
-    }
-
+    // Business hours are informational only (surfaced via the system prompt so the
+    // AI can mention them); they do NOT gate replies. The assistant answers 24/7,
+    // matching the live reply path.
     sse(res, 'status', { type: 'thinking' });
 
     const ctx = this.buildContext(dto);

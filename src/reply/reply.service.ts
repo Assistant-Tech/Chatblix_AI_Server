@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ContextLoaderService } from './context-loader.service';
 import { RedisClient } from '../cache/redis.client';
-import { HoursService } from '../pipeline/hours.service';
 import { PipelineOrchestratorService } from '../pipeline/orchestrator.service';
 import { AppConfigService } from '../config/app-config.service';
 import { parseAgentOutput } from '../common/utils/parser';
@@ -18,7 +17,6 @@ import type {
 import type {
   ReplyRequestDto,
   ReplyResponseEscalate,
-  ReplyResponseOutsideHours,
   ReplyResponseReplied,
 } from '../common/types/reply.dto';
 
@@ -28,7 +26,6 @@ export class ReplyService {
 
   constructor(
     private readonly contextLoader: ContextLoaderService,
-    private readonly hours: HoursService,
     private readonly orchestrator: PipelineOrchestratorService,
     private readonly config: AppConfigService,
     private readonly redis: RedisClient,
@@ -52,21 +49,10 @@ export class ReplyService {
         existing_order: req.existing_order,
       });
 
-      if (!this.hours.isWithinHours(ctx.profile)) {
-        const latency_ms = Date.now() - start;
-        const response: ReplyResponseOutsideHours = {
-          status: 'outside_hours',
-          reply: this.hours.holidayMessage(ctx.profile),
-          metadata: {
-            latency_ms,
-            trace_id: req.options?.trace_id,
-          },
-        };
-        return {
-          response,
-          turnLog: buildOutsideHoursTurnLog(response, latency_ms, req.options?.trace_id),
-        };
-      }
+      // NOTE: business hours are informational only — they describe when the
+      // business is physically open/closed (surfaced to the customer via the
+      // system prompt so the AI can mention them). They deliberately do NOT gate
+      // whether the AI replies: the assistant answers 24/7.
 
       const stalledCountIncoming = await this.readStalledCount(req.conversation_id);
       const collected = await this.runPipeline(req, ctx, stalledCountIncoming);
@@ -274,35 +260,6 @@ function absorbEvent(ev: PipelineEvent, c: CollectedTurn): void {
     default:
       break;
   }
-}
-
-function buildOutsideHoursTurnLog(
-  response: ReplyResponseOutsideHours,
-  latency_ms: number,
-  traceId?: string,
-): AiTurnLogData {
-  return {
-    status: 'outside_hours',
-    triage: {},
-    attempts: [],
-    validatorPass: false,
-    metadataValid: true,
-    retryCount: 0,
-    highSeverityViolations: 0,
-    intentPath: null,
-    language: null,
-    toolsCalled: [],
-    shipped: response.reply,
-    tokensIn: null,
-    cachedIn: null,
-    tokensInBilled: null,
-    tokensOut: null,
-    durationMs: latency_ms,
-    traceId: traceId ?? null,
-    modelTriage: null,
-    modelGenerator: null,
-    modelValidator: null,
-  };
 }
 
 function inferPriorAssistantLang(history: IncomingHistoryMessage[]): LanguageCode | null {
