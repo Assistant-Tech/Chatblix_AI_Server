@@ -216,6 +216,8 @@ Compute approximate similarity to the prior assistant turn (**>80%** token overl
 
 Severity guidance: use `high` when the asserted fact directly contradicts a value present in `BUSINESS_CONTEXT` (wrong price, wrong location name, unsupported payment method, return window that doesn't match). Use `medium` when `BUSINESS_CONTEXT` is silent on the field and you cannot confirm either way. Never upgrade an uncertain check to `high`.
 
+**Empty-catalog escalation to HIGH:** When `BUSINESS_CONTEXT` contains `## CATALOG — EMPTY` or `## CATALOG (none inline — use tools)` and NO `stock_check` tool result appears in the input, the business has no grounded products. In that state, naming ANY specific product or quoting ANY price is a fabrication — flag `high` (not medium), because the model is inventing a product line that does not exist. The correct reply acknowledges interest and hands off.
+
 ### Rule 19 — closing_stage_matches (HIGH)
 
 **Check:** Reply matches `TRIAGE.closing_state.stage`:
@@ -370,6 +372,15 @@ Customers asking evaluation questions trust you with their doubt. The only corre
 **Evidence rule:** quote the offending sentence(s) and identify which particle/`hajur` is the redundant one. **Fix-hint pattern:** "Drop the `hajur` from '<opening|closing>' sentence; the other `hajur` already carries the politeness." Or: "Drop the `hai` on '<offending sentence>'; the closer/preceding particle already carries the tone."
 
 **Why this matters:** Real Nepali speech uses `hajur` once per turn, not twice. Sprinkles particles, doesn't saturate. A reply that opens with "Hajur," AND closes with "hajur?" reads servile and bot-like. ONE `hajur` and ONE well-placed sentence particle is the shopkeeper voice.
+
+### Rule 34 — order_confirmation_grounded (HIGH)
+
+**Check:** When `metadata.order_confirmed == true` OR the reply confirms/finalizes an order (STAGE 3 bullet template, "Order milyo", "order confirm bhayo", "parcel ready/dispatch"), the confirmed product MUST be grounded:
+
+- it appears in `BUSINESS_CONTEXT` → `## CATALOG (authoritative …)`, OR
+- a `stock_check` tool result for that product appears in this turn's input.
+
+If neither holds — including any turn where `BUSINESS_CONTEXT` shows `## CATALOG — EMPTY` — the reply is confirming an order for a product that may not exist. Flag `high` with `evidence` quoting the confirmed product/price and `fix_hint: "Do not confirm an order for an ungrounded product. Capture the customer's details and hand off (handoff_required: true) instead of promising delivery."` This is the last reply-side guard against phantom orders; be strict.
 
 ---
 

@@ -11,6 +11,7 @@ import { EscalationRulesService } from './escalation-rules.service';
 import { MetricsService } from './metrics.service';
 import { severityScore, verdictPasses } from '../common/utils/pipeline/severity';
 import { looksLikeLeakedReasoning, replyBodyOf } from '../common/utils/pipeline/reasoning-leak';
+import { checkOrderGrounding } from '../common/utils/pipeline/order-grounding';
 import { triageRequiresValidation } from './validation-risk';
 import { parsePartialAgentOutput } from '../common/utils/parser';
 import { OpenRouterMessage } from './openrouter.client';
@@ -457,6 +458,24 @@ export class PipelineOrchestratorService {
     }
 
     if (!shipped || !hasReplyBody || reasoningLeaked) {
+      shipped = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
+      outcome = 'ship_with_violations';
+      this.metrics.bump('turn_ship_with_violations');
+    }
+
+    // --- Deterministic order-grounding gate ---
+    // Last line of defense against phantom-order confirmations: if the metadata
+    // claims `order_confirmed: true` for a product we cannot ground (not in the
+    // tenant's catalog AND no stock_check ran this turn), the reply is promising
+    // to deliver a product that may not exist. Never ship that false promise, and
+    // never let the `order_confirmed` flag reach main-backend's order placement.
+    const grounded = checkOrderGrounding(shipped, ctx.profile, toolsCalled);
+    if (!grounded.ok) {
+      this.logger.warn(
+        `[pipeline] AI_PHANTOM_ORDER_BLOCKED ungrounded order_confirmed business_id=${ctx.business_id} ` +
+          `conv=${ctx.conversation_id ?? '-'} trace_id=${ctx.trace_id ?? '-'} product=${JSON.stringify(grounded.product ?? null)}`,
+      );
+      this.metrics.bump('turn_phantom_order_blocked');
       shipped = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
       outcome = 'ship_with_violations';
       this.metrics.bump('turn_ship_with_violations');

@@ -175,9 +175,57 @@ function renderLocations(profile: BusinessProfileDto): string {
   return lines.join('\n');
 }
 
+// Commerce read-tools that let a tenant ground product/price/stock answers at
+// runtime even without an inline catalog. Must match src/pipeline/tools.registry.ts.
+const COMMERCE_TOOLS = new Set(['stock_check', 'order_lookup']);
+
+function hasCommerceTools(profile: BusinessProfileDto): boolean {
+  const enabled = profile.enabled_tools;
+  if (Array.isArray(enabled)) return enabled.some((t) => COMMERCE_TOOLS.has(t));
+  // Legacy fallback (no enabled_tools published): commerce tools are gated on a
+  // non-empty catalog, so an empty catalog implies no commerce tools either.
+  return false;
+}
+
 function renderCatalog(profile: BusinessProfileDto): string {
   const catalog = profile.product_catalog ?? [];
-  if (catalog.length === 0) return '';
+
+  // No inline catalog: the model has NOTHING authoritative to sell from. Left
+  // silent, it pattern-matches the skincare worked-examples in the stage prompts
+  // and fabricates products/prices ("Neem Face Wash NPR 549") and even confirms
+  // orders for them. Emit an explicit grounding guard instead of an empty block.
+  if (catalog.length === 0) {
+    if (hasCommerceTools(profile)) {
+      return [
+        '## CATALOG (none inline — use tools)',
+        'This business has NO inline product list. The worked examples in the stage',
+        'instructions (Neem Soap, Haldi Glow Mask, NPR 499, etc.) are STYLE ONLY — they',
+        'are NOT this business\'s products and MUST NEVER be quoted as real.',
+        '',
+        'Rules:',
+        '- You MUST call `stock_check` before naming any product, quoting any price, or',
+        '  stating availability. Quote ONLY what the tool returns.',
+        '- If `stock_check` returns no match, tell the customer you need to confirm and',
+        '  offer handoff. Never invent a product name, price, or variant.',
+        '- NEVER set `order_confirmed: true` for a product you have not verified via',
+        '  `stock_check` this conversation.',
+      ].join('\n');
+    }
+    return [
+      '## CATALOG — EMPTY (no products configured)',
+      'This business has NOT configured any products, prices, or catalog, and has no',
+      'product/stock tools enabled. The worked examples in the stage instructions',
+      '(Neem Soap, Haldi Glow Mask, NPR 499, etc.) are STYLE ONLY — they are NOT this',
+      'business\'s products and MUST NEVER be quoted as real.',
+      '',
+      'Hard rules for this turn and every turn:',
+      '- NEVER name a specific product, quote or invent a price, or state stock/variants.',
+      '- NEVER run the closing flow or confirm an order. NEVER set `order_confirmed: true`.',
+      '- Acknowledge the customer\'s interest, capture their need, and route to a human:',
+      '  set `handoff_required: true` and let the team follow up with real product details.',
+    ].join('\n');
+  }
+
   const lines: string[] = ['## CATALOG (authoritative — quote only from here)'];
   for (const p of catalog) {
     const parts: string[] = [`- ${p.name}`];

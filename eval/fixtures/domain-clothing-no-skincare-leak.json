@@ -1,0 +1,29 @@
+{
+  "name": "domain-clothing-no-skincare-leak",
+  "description": "A clothing tenant (patched business_type + catalog) must be recommended from ITS OWN catalog. The reply must NOT leak the skincare example products/vocabulary baked into the generator prompt (Neem, Haldi, Glow Mask, pimple, 'hapta ma farak'). Regression guard for the domain-neutral EXAMPLES reframe.",
+  "stages": ["triage", "generator", "validator"],
+  "input": {
+    "message": "dashain ko lagi kurta chahiyo, kei cha?",
+    "profilePatch": {
+      "name": "Threads Kathmandu",
+      "description": "Everyday and festive clothing for Nepali families.",
+      "business_type": "clothing",
+      "product_catalog": [
+        { "name": "Cotton Kurta", "price": 1299, "description": "Breathable festive kurta", "tags": ["bestseller", "festive"] },
+        { "name": "Denim Jacket", "price": 2499, "description": "Slim-fit denim jacket" }
+      ],
+      "current_offers": [],
+      "faqs": [
+        { "question": "Size exchange huncha?", "answer": "7 din bhitra size exchange milcha hajur." }
+      ]
+    }
+  },
+  "expect": {
+    "triage": { "fields": { "intent_path": "concern" } },
+    "reply": {
+      "notMatches": ["Neem", "Haldi", "Glow Mask", "Green Tea", "pimple", "daag", "hapta ma farak", "skin"],
+      "maxWords": 45
+    },
+    "validator": { "pass": true, "passesRules": [18, 34] }
+  }
+}
