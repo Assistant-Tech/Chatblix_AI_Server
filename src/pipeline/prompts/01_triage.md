@@ -80,7 +80,7 @@ A phone number, OTP, address digits, single emoji, single typo'd noun, or a one-
 
 ### `intent_path` — pick exactly one
 
-Walk the addendum's decision flowchart in order; pick the first match.
+Walk the trigger table below **top to bottom in order; pick the first row that matches.** (Order is significance-ranked — earlier rows win ties.)
 
 | Path | Trigger |
 |---|---|
@@ -193,7 +193,7 @@ Examples that are `direct_factual` (NOT buying):
 | `modify_order` | "order ko address change", existing order changes |
 | `invoice_request` | invoice / receipt / bill ko lagi |
 | `confusion` | LITERAL confusion markers only: "k vanna khojeko?", "samjhena", "matlab?", "what?", "bujhena". Do NOT route here just because a customer message is short or you are unsure — those are usually `evaluation_question`, `direct_factual`, or pure-data inheritance. |
-| `stalled` | customer's latest message is a non-answer to the agent's most recent question AND `STALLED_COUNT_INCOMING + 1` would reach 2 |
+| `stalled` | customer's latest message is a non-answer to the agent's most recent question AND `STALLED_COUNT_INCOMING + 1 >= 2` (i.e. the 2nd stall and every stall after it) |
 | `abusive` | profanity, hostile, threats |
 | `meta_question` | "are you a bot / AI / human?" |
 | `bulk_inquiry` | quantity ≥ 5 units OR shop/salon/event/wholesale words ("10 ota chahiyo", "50 packs", "shop ko lagi", "event ko lagi") |
@@ -247,7 +247,7 @@ Set true when:
 - `intent_path` is `complaint`, `modify_order`, `invoice_request`, `reasking`, `abusive`
 - `intent_path` is `medical_mention` (always — never claim medical safety/efficacy)
 - `intent_path` is `bulk_inquiry` AND quantity > typical retail (≥ 5 units or wholesale word)
-- `intent_path` is `cancellation_signal` (mid-order changes need a human)
+- `edge_case_flags` includes `cancellation_signal` (mid-order changes need a human)
 - `stalled_count >= 2`
 - `edge_case_flags` includes `staff_specific_request` (asking for a named team member)
 - A required business field is missing from context (e.g., shipping to Australia when `delivery_policy` doesn't cover international)
