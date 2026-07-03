@@ -274,7 +274,43 @@ function renderPolicies(profile: BusinessProfileDto): string {
   return lines.join('\n');
 }
 
+function renderCustomClosingFlow(flow: BusinessProfileDto['closing_flow']): string {
+  if (!flow) return '';
+  const stage1 = (flow.stage1_captures ?? []).filter((s) => s?.trim());
+  const stage3 = (flow.stage3_confirms ?? []).filter((s) => s?.trim());
+  const vocab = (flow.vocabulary ?? []).filter((s) => s?.trim());
+  // Nothing meaningful to say → let the enum fallback handle it.
+  if (stage1.length === 0 && stage3.length === 0 && vocab.length === 0) return '';
+
+  const lines: string[] = ['## CLOSING FLOW'];
+  if (flow.type?.trim()) lines.push(`Type: ${flow.type.trim()}`);
+  lines.push('');
+  if (stage1.length > 0) {
+    lines.push(`Stage 1 captures: ${stage1.join(', ')}.`);
+    lines.push(`Stage 2 collects whichever of these is still missing: ${stage1.join(' / ')}.`);
+  }
+  if (stage3.length > 0) {
+    lines.push(`Stage 3 confirms: ${stage3.join(', ')}.`);
+  }
+  lines.push(
+    'Only set `order_confirmed: true` on the Stage 3 turn once every field above is captured.',
+  );
+  if (vocab.length > 0) {
+    lines.push('', 'Vocabulary:');
+    for (const v of vocab) lines.push(`  - ${v}`);
+  }
+  return lines.join('\n');
+}
+
 function renderClosingFlow(profile: BusinessProfileDto): string {
+  // A tenant-provided closing_flow overrides the built-in business_type enum. This
+  // lets tenant types the enum doesn't cover (courses, travel, real-estate, rentals)
+  // define their own capture fields + vocabulary instead of inheriting parcel/delivery
+  // phrasing that's wrong for an intangible. Only render the custom block when it
+  // actually carries content; otherwise fall through to the enum.
+  const custom = renderCustomClosingFlow(profile.closing_flow);
+  if (custom) return custom;
+
   const type = profile.business_type?.trim().toLowerCase();
   const lines: string[] = ['## CLOSING FLOW'];
 

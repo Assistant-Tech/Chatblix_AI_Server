@@ -92,6 +92,24 @@ Walk the trigger table below **top to bottom in order; pick the first row that m
 | `named_product_price_ask` | "kati ho", "how much", "rate", "cost" with a product |
 | `buying_signal` | price + verb (linchhu, kinchhu, "I'll take"), payment method named in **commitment** form ("eSewa bata pay garchhu"), address shared spontaneously, "ok lets do it" |
 | `process_question` | delivery process, payment process, return window, timing — when no buying signal |
+| `complaint` | wrong product, refund, "is it genuine", broken, late |
+| `reasking` | "pahile ek janasanga kura bhayeko thiyo", "no one helped", "already talked" |
+| `bargain` | "kam garidinu", "NPR X ma?", "thodai discount" |
+| `modify_order` | "order ko address change", existing order changes |
+| `invoice_request` | invoice / receipt / bill ko lagi |
+| `confusion` | LITERAL confusion markers only: "k vanna khojeko?", "samjhena", "matlab?", "what?", "bujhena". Do NOT route here just because a customer message is short or you are unsure — those are usually `evaluation_question`, `direct_factual`, or pure-data inheritance. |
+| `stalled` | customer's latest message is a non-answer to the agent's most recent question AND `STALLED_COUNT_INCOMING + 1 >= 2` (i.e. the 2nd stall and every stall after it) |
+| `abusive` | profanity, hostile, threats |
+| `meta_question` | "are you a bot / AI / human?" |
+| `bulk_inquiry` | quantity ≥ 5 units OR shop/salon/event/wholesale words ("10 ota chahiyo", "50 packs", "shop ko lagi", "event ko lagi") |
+| `gift_purchase` | for someone else: "mero saathi/dida/buwa/aama ko lagi", "gift ko lagi", "Dashain ma X ko lagi" |
+| `combo_request` | "set ma cha?", "bundle", "package", "combo", "duitai sangai", "X + Y combo" |
+| `authenticity_check` | "original ho?", "real ho?", "fake ta haina?", "genuine ho?", "ladaki ho?", "asal ho?" |
+| `reorder` | "pheri tyo", "tehi ko jastai", "last time ko", "again the same" — context: customer has prior purchase signals |
+| `discovery_open` | open browse: "k k cha?", "naya k aayo?", "show me what you have", "what's new" — no concern, no product named |
+| `scheduling_request` | specific time / day delivery ask: "Saturday delivery huncha?", "kal pathaune", "morning ma chahincha", "evening ma" |
+| `samples_request` | "sample milcha?", "trial size cha?", "tester cha?", "small bottle" |
+| `medical_mention` | any health condition, medical restriction, or cited professional health advice. Skincare: eczema, psoriasis, pregnancy, nursing, "doctor le bhaneko". Food: food allergy, diabetes, medical dietary restriction. Any domain: if the customer mentions a health condition in the context of using the product/service, route here and always handoff — never claim product safety for medical contexts. |
 
 **Critical disambiguation:** asking IF a service is available (delivery, payment method, return) is `direct_factual`, NOT `buying_signal`. Even if the question contains "delivery" / "payment" / "esewa" / "khalti", a question form ("huncha?", "milcha?", "hudaina?", "available cha?") is the customer **evaluating** their options, not committing. Buying signal needs a verb of commitment ("linchhu", "I'll take", "ok do it") OR an unprompted address/phone share.
 
@@ -187,24 +205,6 @@ Examples that are `direct_factual` (NOT buying):
 - "esewa milcha?" → asking which payment methods exist
 - "COD cha?" → asking if cash-on-delivery is available
 - "Kathmandu bahira deliver garcha?" → asking delivery coverage
-| `complaint` | wrong product, refund, "is it genuine", broken, late |
-| `reasking` | "pahile ek janasanga kura bhayeko thiyo", "no one helped", "already talked" |
-| `bargain` | "kam garidinu", "NPR X ma?", "thodai discount" |
-| `modify_order` | "order ko address change", existing order changes |
-| `invoice_request` | invoice / receipt / bill ko lagi |
-| `confusion` | LITERAL confusion markers only: "k vanna khojeko?", "samjhena", "matlab?", "what?", "bujhena". Do NOT route here just because a customer message is short or you are unsure — those are usually `evaluation_question`, `direct_factual`, or pure-data inheritance. |
-| `stalled` | customer's latest message is a non-answer to the agent's most recent question AND `STALLED_COUNT_INCOMING + 1 >= 2` (i.e. the 2nd stall and every stall after it) |
-| `abusive` | profanity, hostile, threats |
-| `meta_question` | "are you a bot / AI / human?" |
-| `bulk_inquiry` | quantity ≥ 5 units OR shop/salon/event/wholesale words ("10 ota chahiyo", "50 packs", "shop ko lagi", "event ko lagi") |
-| `gift_purchase` | for someone else: "mero saathi/dida/buwa/aama ko lagi", "gift ko lagi", "Dashain ma X ko lagi" |
-| `combo_request` | "set ma cha?", "bundle", "package", "combo", "duitai sangai", "X + Y combo" |
-| `authenticity_check` | "original ho?", "real ho?", "fake ta haina?", "genuine ho?", "ladaki ho?", "asal ho?" |
-| `reorder` | "pheri tyo", "tehi ko jastai", "last time ko", "again the same" — context: customer has prior purchase signals |
-| `discovery_open` | open browse: "k k cha?", "naya k aayo?", "show me what you have", "what's new" — no concern, no product named |
-| `scheduling_request` | specific time / day delivery ask: "Saturday delivery huncha?", "kal pathaune", "morning ma chahincha", "evening ma" |
-| `samples_request` | "sample milcha?", "trial size cha?", "tester cha?", "small bottle" |
-| `medical_mention` | any health condition, medical restriction, or cited professional health advice. Skincare: eczema, psoriasis, pregnancy, nursing, "doctor le bhaneko". Food: food allergy, diabetes, medical dietary restriction. Any domain: if the customer mentions a health condition in the context of using the product/service, route here and always handoff — never claim product safety for medical contexts. |
 
 ### `closing_state`
 

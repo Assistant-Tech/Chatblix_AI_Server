@@ -210,6 +210,46 @@ export class CorrectionDto {
   corrected!: string;
 }
 
+/**
+ * Per-tenant override for the closing (order/booking/quote) flow. When present it
+ * replaces the compiler's built-in `business_type` enum, so tenant types the enum
+ * doesn't cover — courses, travel, real-estate, rentals — can define their own
+ * capture fields and vocabulary instead of falling back to parcel/delivery
+ * phrasing that's wrong for an intangible. Every field is optional; the compiler
+ * only overrides the parts that are provided.
+ */
+export class ClosingFlowDto {
+  // Short label for the flow, e.g. "delivery", "booking", "quote", "enrollment".
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  type?: string;
+
+  // Fields to capture on the first closing turn (STAGE 1), e.g. ["naam","phone","preferred date"].
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  stage1_captures?: string[];
+
+  // Fields to confirm on the final turn (STAGE 3), e.g. ["naam","service","phone","datetime"].
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  stage3_confirms?: string[];
+
+  // Domain phrasing cues, e.g. ["'booking confirm garchu' not 'parcel pathaucha'"].
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  @MaxLength(160, { each: true })
+  vocabulary?: string[];
+}
+
 export class BusinessProfileDto {
   @IsString()
   @MinLength(1)
@@ -296,5 +336,12 @@ export class BusinessProfileDto {
   @ArrayMaxSize(50)
   @IsString({ each: true })
   enabled_tools?: string[];
+
+  // Optional per-tenant closing-flow override. When present, the compiler renders
+  // the closing section from this instead of the built-in business_type enum.
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ClosingFlowDto)
+  closing_flow?: ClosingFlowDto;
 
 }
