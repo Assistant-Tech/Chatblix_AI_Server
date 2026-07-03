@@ -31,6 +31,10 @@ export interface StreamGeneratorInput {
 
 export type GeneratorEvent = ChatStreamEvent;
 
+// Assistant-turn prefill that forces the reply to begin with the output contract's
+// opening tag. Kept as the bare tag so the model streams only the reply body after it.
+const GENERATOR_REPLY_PREFILL = '<reply>';
+
 @Injectable()
 export class GeneratorService {
   private readonly logger = new Logger(GeneratorService.name);
@@ -91,6 +95,20 @@ export class GeneratorService {
     // Withheld entirely on the forced final pass after the tool-iteration cap.
     const selectedTools = disableTools ? [] : selectToolsForProfile(ctx.profile);
     const tools = selectedTools.length > 0 ? selectedTools : undefined;
+
+    // Output-format enforcement at the API boundary. When NO tools are sent this
+    // pass, prefill the assistant turn with `<reply>` so the model physically cannot
+    // emit a preamble, a ```-code-fence, a "Looking at the conversation…" reasoning
+    // leak, or a stray second `<reply>` before the answer — the exact corruption that
+    // shipped in the phantom-order incident (turns 5-6: leaked ``` fence + doubled
+    // `<reply>`). We ONLY prefill when `tools` is undefined: prefilling an assistant
+    // text turn suppresses tool calls, so tenants with commerce tools (and non-final
+    // tool passes) keep the streamed path plus the orchestrator's defensive `<reply>`
+    // prepend. The streamed content then starts after `<reply>`, which the orchestrator
+    // already handles (it prepends `<reply>` when missing and collapses duplicates).
+    if (!tools) {
+      messages.push({ role: 'assistant', content: GENERATOR_REPLY_PREFILL });
+    }
 
     try {
       for await (const chunk of this.llmClient.chatStream(
