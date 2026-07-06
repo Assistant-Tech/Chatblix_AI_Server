@@ -5,9 +5,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { timingSafeEqual } from 'node:crypto';
 import type { Request } from 'express';
 import { AppConfigService } from '../config/app-config.service';
+import { safeEqual } from '../common/utils/crypto';
 import { IS_PUBLIC_KEY } from './public.decorator';
 
 const BEARER_PREFIX = /^Bearer\s+/i;
@@ -41,11 +41,4 @@ export class InternalTokenGuard implements CanActivate {
     }
     return true;
   }
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const ab = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (ab.length !== bb.length) return false;
-  return timingSafeEqual(ab, bb);
 }

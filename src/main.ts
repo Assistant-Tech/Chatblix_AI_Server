@@ -15,6 +15,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
 
@@ -27,6 +28,9 @@ async function bootstrap(): Promise<void> {
   });
   app.setGlobalPrefix('ai/v1');
 
+  // Baseline security headers (HSTS, no-sniff, frameguard, etc.).
+  app.use(helmet());
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -36,21 +40,25 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Chatblix AI Backend')
-    .setDescription(
-      'Stateless AI pipeline worker. Consumes jobs from the ai:reply BullMQ queue. ' +
-      'Profile data is read from shared Redis (written by main-backend on every save). ' +
-      'GET /ai/v1/health is the only active HTTP endpoint.',
-    )
-    .setVersion('0.2.0')
-    .addTag('health', 'Service health')
-    .build();
+  // Swagger exposes the full API map — keep it out of production.
+  const swaggerEnabled = process.env.NODE_ENV !== 'production';
+  if (swaggerEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Chatblix AI Backend')
+      .setDescription(
+        'Stateless AI pipeline worker. Consumes jobs from the ai:reply BullMQ queue. ' +
+        'Profile data is read from shared Redis (written by main-backend on every save). ' +
+        'GET /ai/v1/health is the only active HTTP endpoint.',
+      )
+      .setVersion('0.2.0')
+      .addTag('health', 'Service health')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('ai/v1/docs', app, document, {
-    swaggerOptions: { persistAuthorization: true, displayRequestDuration: true },
-  });
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('ai/v1/docs', app, document, {
+      swaggerOptions: { persistAuthorization: true, displayRequestDuration: true },
+    });
+  }
 
   const config = app.get(AppConfigService);
   const port = config.port();
@@ -58,7 +66,9 @@ async function bootstrap(): Promise<void> {
   await app.listen(port);
   const logger = new Logger('Bootstrap');
   logger.log(`chatblix ai-backend listening on http://localhost:${port}`);
-  logger.log(`Swagger docs: http://localhost:${port}/ai/v1/docs`);
+  if (swaggerEnabled) {
+    logger.log(`Swagger docs: http://localhost:${port}/ai/v1/docs`);
+  }
 }
 
 bootstrap().catch((e) => {

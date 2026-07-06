@@ -128,9 +128,11 @@ export class PipelineOrchestratorService {
     const escalation = this.escalation.check(message, ctx.history, ctx.profile, triage);
     if (escalation.escalate) {
       const detectedLang = (triage?.language?.detected as LanguageCode | undefined) ?? priorAssistantLang ?? 'romanized_ne';
+      // Extract just the <reply> body from the synthesized candidate — a blanket
+      // tag strip would leave the <metadata>{…}</metadata> JSON in the customer reply.
       const handoffText =
         ctx.profile.escalation?.handoff_message ||
-        this.synthesizeHandoffCandidate(triage, priorAssistantLang).replace(/<[^>]+>/g, '');
+        extractReplyText(this.synthesizeHandoffCandidate(triage, priorAssistantLang)).trim();
       const shipped = wrapHandoff(handoffText, escalation.reason, detectedLang);
       yield {
         event: 'escalate',

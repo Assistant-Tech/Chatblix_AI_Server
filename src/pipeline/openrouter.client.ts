@@ -144,59 +144,76 @@ export class OpenRouterClient {
     if (stopSequences) body.stop = stopSequences;
     if (responseFormat) body.response_format = responseFormat;
 
-    let response: Response;
+    // Keep the timeout armed through the body read (not just the fetch) so a
+    // provider that returns headers but then stalls the body can't hang forever.
+    // The timer is cleared exactly once, in the finally below.
     try {
-      response = await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: this.authHeaders(),
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-    } catch (e) {
-      const err = e as { name?: string; message?: string };
-      if (err?.name === 'AbortError') {
-        throw new OpenRouterError(`OpenRouter request timed out after ${timeoutMs}ms`, 'timeout');
+      let response: Response;
+      try {
+        response = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: this.authHeaders(),
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } catch (e) {
+        const err = e as { name?: string; message?: string };
+        if (err?.name === 'AbortError') {
+          throw new OpenRouterError(`OpenRouter request timed out after ${timeoutMs}ms`, 'timeout');
+        }
+        throw new OpenRouterError(`OpenRouter request failed: ${err?.message || e}`, 'api_error');
       }
-      throw new OpenRouterError(`OpenRouter request failed: ${err?.message || e}`, 'api_error');
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new OpenRouterError(
+          `OpenRouter returned ${response.status}: ${errText.slice(0, 200)}`,
+          'api_error',
+          response.status,
+        );
+      }
+
+      // A 200 with a non-JSON body must surface as a typed OpenRouterError, not a
+      // raw SyntaxError that escapes the error hierarchy and never gets classified.
+      let json: {
+        choices?: Array<{ message?: { content?: string } }>;
+        usage?: unknown;
+      };
+      try {
+        json = (await response.json()) as typeof json;
+      } catch {
+        throw new OpenRouterError(
+          'OpenRouter returned non-JSON body',
+          'api_error',
+          response.status,
+        );
+      }
+
+      const text = json?.choices?.[0]?.message?.content;
+      if (typeof text !== 'string') {
+        throw new OpenRouterError('OpenRouter returned no content', 'no_content', undefined, json);
+      }
+      const rawUsage = json?.usage as
+        | {
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            cached_tokens?: number;
+            prompt_tokens_details?: { cached_tokens?: number };
+          }
+        | null
+        | undefined;
+      const usage: ChatJsonUsage | null = rawUsage
+        ? {
+            prompt_tokens: rawUsage.prompt_tokens ?? null,
+            completion_tokens: rawUsage.completion_tokens ?? null,
+            cached_tokens:
+              rawUsage.prompt_tokens_details?.cached_tokens ?? rawUsage.cached_tokens ?? null,
+          }
+        : null;
+      return { text, raw: json, usage };
     } finally {
       clearTimeout(timer);
     }
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      throw new OpenRouterError(
-        `OpenRouter returned ${response.status}: ${errText.slice(0, 200)}`,
-        'api_error',
-        response.status,
-      );
-    }
-
-    const json = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-      usage?: unknown;
-    };
-    const text = json?.choices?.[0]?.message?.content;
-    if (typeof text !== 'string') {
-      throw new OpenRouterError('OpenRouter returned no content', 'no_content', undefined, json);
-    }
-    const rawUsage = json?.usage as
-      | {
-          prompt_tokens?: number;
-          completion_tokens?: number;
-          cached_tokens?: number;
-          prompt_tokens_details?: { cached_tokens?: number };
-        }
-      | null
-      | undefined;
-    const usage: ChatJsonUsage | null = rawUsage
-      ? {
-          prompt_tokens: rawUsage.prompt_tokens ?? null,
-          completion_tokens: rawUsage.completion_tokens ?? null,
-          cached_tokens:
-            rawUsage.prompt_tokens_details?.cached_tokens ?? rawUsage.cached_tokens ?? null,
-        }
-      : null;
-    return { text, raw: json, usage };
   }
 
   async *chatStream(opts: ChatStreamOptions): AsyncGenerator<ChatStreamEvent> {

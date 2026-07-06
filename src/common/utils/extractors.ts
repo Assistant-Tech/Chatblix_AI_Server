@@ -92,7 +92,9 @@ export function extractContactInfo(text: string): ExtractedContact {
 
   const ADDRESS_CUES = /\b(tole|marg|chowk|ward|sadak|street|road|rd|gali|near|bata|samu|nagar|colony|height|tower|apartment|building)\b/i;
   const HOUSE_NUM = /\b(?:ward[-\s]?\d+|house\s*no\.?|h\.?no\.?)\b/i;
-  const looksLikeAddress = !!loc || ADDRESS_CUES.test(text) || HOUSE_NUM.test(text);
+  // A bare city name (already captured as `location`) is NOT an address — only
+  // treat the message as an address when it carries real street/house cues.
+  const looksLikeAddress = ADDRESS_CUES.test(text) || HOUSE_NUM.test(text);
   if (looksLikeAddress) {
     const cleaned = text.trim().replace(/\s+/g, ' ').slice(0, 120);
     if (cleaned) out.address = cleaned;

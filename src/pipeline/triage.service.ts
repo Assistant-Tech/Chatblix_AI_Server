@@ -56,7 +56,11 @@ export class TriageService {
     ].join('\n\n');
   }
 
-  private async repairJson(rawText: string, model: string, business_id: string): Promise<unknown> {
+  private async repairJson(
+    rawText: string,
+    model: string,
+    business_id: string,
+  ): Promise<{ parsed: unknown; usage: ChatJsonUsage | null }> {
     try {
       const repaired = await this.llmClient.chatJson(
         {
@@ -69,10 +73,12 @@ export class TriageService {
         },
         { stage: 'triage', business_id },
       );
-      return extractJsonObject(repaired.text);
+      // Surface the repair call's usage so self-correction turns are billed in
+      // full — this LLM call was previously invisible to the token accounting.
+      return { parsed: extractJsonObject(repaired.text), usage: repaired.usage };
     } catch (e) {
       this.logger.warn(`triage JSON repair failed business_id=${business_id}: ${(e as Error).message}`);
-      return null;
+      return { parsed: null, usage: null };
     }
   }
 
@@ -139,10 +145,13 @@ export class TriageService {
     }
 
     let parsed = extractJsonObject(response.text);
+    let repairUsage: ChatJsonUsage | null = null;
     if (!parsed) {
       this.metrics.bump('triage_json_parse_error');
       this.metrics.bump('triage_self_correction_used');
-      parsed = await this.repairJson(response.text, model, ctx.business_id);
+      const repair = await this.repairJson(response.text, model, ctx.business_id);
+      parsed = repair.parsed;
+      repairUsage = repair.usage;
     }
 
     if (!parsed || !isTriageShape(parsed)) {
@@ -159,11 +168,16 @@ export class TriageService {
       };
     }
 
+    // Include the repair call's usage (if any) so billing isn't undercounted on
+    // self-correction turns.
+    const tokensIn = (response.usage?.prompt_tokens ?? 0) + (repairUsage?.prompt_tokens ?? 0);
+    const tokensOut = (response.usage?.completion_tokens ?? 0) + (repairUsage?.completion_tokens ?? 0);
+    const cachedIn = (response.usage?.cached_tokens ?? 0) + (repairUsage?.cached_tokens ?? 0);
     return {
       triage: parsed,
-      tokensIn: response.usage?.prompt_tokens ?? null,
-      tokensOut: response.usage?.completion_tokens ?? null,
-      cachedIn: response.usage?.cached_tokens ?? null,
+      tokensIn: tokensIn || null,
+      tokensOut: tokensOut || null,
+      cachedIn: cachedIn || null,
     };
   }
 }

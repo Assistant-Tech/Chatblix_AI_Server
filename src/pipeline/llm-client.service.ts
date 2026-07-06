@@ -113,13 +113,12 @@ export class LLMClientService {
           : null,
       );
     } catch (e) {
-      if (firstChunkSeen) {
-        // Already yielded data — surface the error as-is; retrying would duplicate.
-        throw this.translate(e);
-      }
-      // Pre-first-chunk failure → translate to typed error. ReplyService can
-      // decide whether to retry by re-invoking chatStream.
-      throw this.translate(e);
+      // A pre-first-chunk failure is safe to retry (no tokens emitted yet); a
+      // mid-stream failure is NOT (retrying would duplicate already-yielded
+      // tokens). Mark the typed error so callers can tell the two apart.
+      const translated = this.translate(e) as Error & { retriable?: boolean };
+      translated.retriable = !firstChunkSeen;
+      throw translated;
     }
   }
 
@@ -202,7 +201,14 @@ export class LLMClientService {
 }
 
 function isRetriable(err: Error): boolean {
-  return err instanceof LLMTimeoutError || err instanceof LLMRateLimitError || err instanceof LLMServerError;
+  if (err instanceof LLMTimeoutError || err instanceof LLMRateLimitError) return true;
+  if (err instanceof LLMServerError) {
+    // 4xx (bad model/key/request) is deterministic — retrying just wastes the
+    // budget and makes a permanent misconfig look transient. Only retry a
+    // missing/unknown status, an explicit 429, or a genuine 5xx.
+    return !err.status || err.status === 429 || err.status >= 500;
+  }
+  return false;
 }
 
 function jitter(ms: number): number {

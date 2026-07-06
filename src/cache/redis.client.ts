@@ -25,7 +25,8 @@ export class RedisClient implements OnModuleInit, OnModuleDestroy {
     if (pong !== 'PONG') {
       throw new Error(`Unexpected Redis PING response: ${pong}`);
     }
-    this.logger.log(`Connected to Redis at ${this.config.redisUrl()}`);
+    // Log host:port only — the full URL embeds the password.
+    this.logger.log(`Connected to Redis at ${redisHost(this.config.redisUrl())}`);
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -34,5 +35,17 @@ export class RedisClient implements OnModuleInit, OnModuleDestroy {
 
   raw(): Redis {
     return this.client;
+  }
+}
+
+/**
+ * Extracts `host:port` from a Redis URL so the password embedded in the URL is
+ * never written to logs. Falls back to a redacted marker if the URL can't be parsed.
+ */
+export function redisHost(url: string): string {
+  try {
+    return new URL(url).host || '[redacted]';
+  } catch {
+    return '[redacted]';
   }
 }

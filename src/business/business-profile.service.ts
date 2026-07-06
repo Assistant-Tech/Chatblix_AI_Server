@@ -58,12 +58,25 @@ export class BusinessProfileService {
    * Pipeline stages currently use static markdown prompts via PromptsService.
    */
   async getCompiledPrompt(id: string): Promise<string> {
-    const cached = await this.promptCache.get(id);
-    if (cached) return cached;
+    try {
+      const cached = await this.promptCache.get(id);
+      if (cached) return cached;
+    } catch (e) {
+      this.logger.warn(
+        `prompt cache read error business_id=${id}: ${(e as Error).message} — compiling inline`,
+      );
+    }
 
     const profile = await this.get(id);
     const compiled = this.compiler.compile(profile);
-    await this.promptCache.set(id, compiled);
+
+    try {
+      await this.promptCache.set(id, compiled);
+    } catch (e) {
+      this.logger.warn(
+        `prompt cache write error business_id=${id}: ${(e as Error).message} — continuing without cache`,
+      );
+    }
     return compiled;
   }
 }

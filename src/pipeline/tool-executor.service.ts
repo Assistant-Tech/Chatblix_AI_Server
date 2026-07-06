@@ -21,7 +21,8 @@ export class ToolExecutorService {
   constructor(private readonly config: AppConfigService) { }
 
   async execute(toolName: string, args: string, ctx: ToolContext): Promise<string> {
-    this.logger.log(`Executing tool=${toolName} business_id=${ctx.business_id} args=${args}`);
+    // Never log raw args — they carry customer PII (name/email/phone/address).
+    this.logger.log(`Executing tool=${toolName} business_id=${ctx.business_id}`);
 
     switch (toolName) {
       case 'stock_check':

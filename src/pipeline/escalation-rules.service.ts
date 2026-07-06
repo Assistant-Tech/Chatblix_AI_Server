@@ -48,7 +48,10 @@ export class EscalationRulesService {
     profile: BusinessProfileDto,
     triage?: Triage | null,
   ): EscalationCheckResult {
-    if (triage?.handoff_required) {
+    // Only escalate a triage handoff for intents that genuinely need a human.
+    // Greetings, questions, and general discovery are handled by the generator —
+    // do NOT silence it even if the triage model flags handoff_required.
+    if (triage?.handoff_required && HUMAN_REQUIRED_INTENTS.has(triage.intent_path)) {
       return { escalate: true, reason: 'triage_handoff' };
     }
 

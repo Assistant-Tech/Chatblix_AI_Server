@@ -272,12 +272,14 @@ function inferPriorAssistantLang(history: IncomingHistoryMessage[]): LanguageCod
   return null;
 }
 
-function inferPriorAgentQuestion(history: IncomingHistoryMessage[]): string | null {
+export function inferPriorAgentQuestion(history: IncomingHistoryMessage[]): string | null {
   for (let i = history.length - 1; i >= 0; i--) {
     const t = history[i];
     if (t.role !== 'assistant') continue;
-    if (t.content?.trim().endsWith('?')) return t.content.trim();
-    return null;
+    // If the customer already replied after this assistant turn, the question
+    // has been answered — don't resurface a stale, already-answered question.
+    if (history.slice(i + 1).some((m) => m.role === 'user')) return null;
+    return t.content?.trim().endsWith('?') ? t.content.trim() : null;
   }
   return null;
 }

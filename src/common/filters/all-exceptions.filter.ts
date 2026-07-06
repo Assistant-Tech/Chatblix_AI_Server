@@ -55,6 +55,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const name = exception.constructor.name;
       const response = exception.getResponse();
 
+      // Never leak 5xx internals (e.g. "connect ECONNREFUSED …", upstream timeouts)
+      // to external callers. Keep the real detail in the logs only.
+      if (status >= 500) {
+        const detail =
+          typeof response === 'string'
+            ? response
+            : typeof (response as Record<string, unknown>)?.message === 'string'
+              ? ((response as Record<string, unknown>).message as string)
+              : exception.message;
+        return { status, clientMessage: 'Internal server error', logMessage: `[${name}] ${detail}` };
+      }
+
       if (typeof response === 'object' && response !== null) {
         const r = response as Record<string, unknown>;
 

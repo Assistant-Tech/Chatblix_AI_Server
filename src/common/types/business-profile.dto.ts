@@ -13,7 +13,11 @@ import {
   MaxLength,
   Min,
   MinLength,
+  Validate,
   ValidateNested,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 
 export const TONE_STYLES = ['formal', 'friendly', 'casual'] as const;
@@ -31,6 +35,52 @@ export const WEEKDAYS = [
 export type Weekday = (typeof WEEKDAYS)[number];
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function hhmmToMinutes(v: string): number {
+  const m = HHMM.exec(v);
+  if (!m) return NaN;
+  const [h, min] = v.split(':').map(Number);
+  return h * 60 + min;
+}
+
+// `close` must be strictly after `open`. Format is enforced separately by @Matches,
+// so an unparseable value passes here to avoid a confusing duplicate error.
+@ValidatorConstraint({ name: 'openBeforeClose', async: false })
+export class OpenBeforeCloseConstraint implements ValidatorConstraintInterface {
+  validate(close: unknown, args: ValidationArguments): boolean {
+    const open = (args.object as ScheduleEntryDto).open;
+    const o = hhmmToMinutes(String(open));
+    const c = hhmmToMinutes(String(close));
+    if (Number.isNaN(o) || Number.isNaN(c)) return true;
+    return o < c;
+  }
+  defaultMessage(): string {
+    return 'open must be earlier than close (HH:MM, 24h)';
+  }
+}
+
+function isValidIanaTimeZone(tz: string): boolean {
+  if (!tz) return false;
+  try {
+    // Throws RangeError for an unknown zone. This accepts every zone the runtime
+    // recognizes (canonical names + aliases), which is exactly what we want —
+    // Intl.supportedValuesOf lists only canonical names and misses valid aliases.
+    Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+@ValidatorConstraint({ name: 'ianaTimeZone', async: false })
+export class IanaTimeZoneConstraint implements ValidatorConstraintInterface {
+  validate(tz: unknown): boolean {
+    return typeof tz === 'string' && isValidIanaTimeZone(tz);
+  }
+  defaultMessage(): string {
+    return 'timezone must be a valid IANA time zone (e.g. Asia/Kathmandu)';
+  }
+}
 
 export class ToneDto {
   @IsIn(TONE_STYLES)
@@ -69,12 +119,14 @@ export class ScheduleEntryDto {
   open!: string;
 
   @Matches(HHMM, { message: 'close must be HH:MM (24h)' })
+  @Validate(OpenBeforeCloseConstraint)
   close!: string;
 }
 
 export class HoursDto {
   @IsString()
   @MaxLength(64)
+  @Validate(IanaTimeZoneConstraint)
   timezone!: string;
 
   @IsArray()

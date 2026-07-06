@@ -31,6 +31,9 @@ export class MainBackendClient {
         return await this.fetchProfile(tenantId);
       } catch (e) {
         if (e instanceof NotFoundException) throw e;
+        // A parse failure (non-JSON body) is deterministic — retrying just burns
+        // the attempt budget on the same broken response.
+        if ((e as { terminal?: boolean }).terminal) throw e;
         lastError = e;
         if (attempt < MAX_RETRIES) {
           this.logger.warn(
@@ -79,7 +82,18 @@ export class MainBackendClient {
       throw new InternalServerErrorException(`main-backend returned ${response.status}`);
     }
 
-    const json = await response.json() as { data?: BusinessProfileDto } | BusinessProfileDto;
+    let json: { data?: BusinessProfileDto } | BusinessProfileDto;
+    try {
+      json = await response.json() as { data?: BusinessProfileDto } | BusinessProfileDto;
+    } catch {
+      // Non-JSON error page (e.g. an HTML 502 from a proxy). Mark terminal so the
+      // retry loop in getProfile() stops immediately instead of retrying 3×.
+      const err = new InternalServerErrorException(
+        'main-backend returned non-JSON body',
+      ) as InternalServerErrorException & { terminal?: boolean };
+      err.terminal = true;
+      throw err;
+    }
 
     // main-backend wraps responses in { data: ... } via ResponseInterceptor
     const profile = 'data' in json && json.data ? json.data : json as BusinessProfileDto;

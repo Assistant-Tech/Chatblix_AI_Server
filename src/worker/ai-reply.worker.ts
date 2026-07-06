@@ -56,10 +56,13 @@ export class AiReplyWorker extends WorkerHost {
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`job_timeout_${ms}ms`)), ms),
-    ),
-  ]);
+  let id: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    id = setTimeout(() => reject(new Error(`job_timeout_${ms}ms`)), ms);
+    // Don't keep the event loop alive on this timer — a SIGTERM/rolling deploy
+    // must be able to exit without waiting out the full job timeout.
+    id.unref?.();
+  });
+  // Clear the timer once the work settles so it never fires (or lingers) after success.
+  return Promise.race([promise.finally(() => clearTimeout(id)), timeout]);
 }

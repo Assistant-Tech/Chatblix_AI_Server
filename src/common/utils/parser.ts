@@ -1,5 +1,5 @@
 import { extractJsonObject } from './pipeline/contracts';
-import type { AgentMetadata } from '../types/pipeline.types';
+import type { AgentMetadata, LanguageCode } from '../types/pipeline.types';
 
 const FALLBACK_METADATA: Required<Pick<AgentMetadata,
   'lead_score' | 'stage' | 'intent' | 'next_step' | 'extracted_data' | 'handoff_required' | 'handoff_context' | 'suggested_reply_language' | 'tags'
@@ -139,7 +139,7 @@ function enforceMetadataSchema(raw: AgentMetadata | null, isComplaint = false): 
         : {},
     handoff_required: Boolean(raw.handoff_required ?? isComplaint),
     handoff_context: raw.handoff_context ?? null,
-    suggested_reply_language: (raw.suggested_reply_language ?? 'en') as AgentMetadata['suggested_reply_language'],
+    suggested_reply_language: validateLanguageCode(raw.suggested_reply_language),
     tags: Array.isArray(raw.tags) ? raw.tags : [],
   };
 }
@@ -158,6 +158,16 @@ function validateStage(stage: unknown): string {
 function validateIntent(intent: unknown): string {
   const valid = ['buying', 'inquiry', 'complaint', 'browsing'];
   return typeof intent === 'string' && valid.includes(intent) ? intent : 'browsing';
+}
+
+const VALID_LANGUAGES: ReadonlyArray<LanguageCode> = ['romanized_ne', 'en', 'mixed'];
+
+// The only field in the metadata schema that reaches the caller without a runtime
+// allow-list check. Coerce anything outside the known set to a safe default.
+function validateLanguageCode(v: unknown): LanguageCode {
+  return typeof v === 'string' && (VALID_LANGUAGES as readonly string[]).includes(v)
+    ? (v as LanguageCode)
+    : 'en';
 }
 
 function sanitizeReplyText(s: string): string {
@@ -250,7 +260,7 @@ export function parsePartialAgentOutput(buffer: string, userMessage: string = ''
       assignIfMatch(metadata, 'intent', metaSrc, /"intent"\s*:\s*"([^"\\]*)"/, (v) => v);
       assignIfMatch(metadata, 'next_step', metaSrc, /"next_step"\s*:\s*"((?:[^"\\]|\\.)*)"/, (v) => v);
       assignIfMatch(metadata, 'next_action', metaSrc, /"next_action"\s*:\s*"((?:[^"\\]|\\.)*)"/, (v) => v);
-      assignIfMatch(metadata, 'suggested_reply_language', metaSrc, /"suggested_reply_language"\s*:\s*"([^"\\]*)"/, (v) => v);
+      assignIfMatch(metadata, 'suggested_reply_language', metaSrc, /"suggested_reply_language"\s*:\s*"([^"\\]*)"/, (v) => validateLanguageCode(v));
       assignIfMatch(metadata, 'handoff_required', metaSrc, /"handoff_required"\s*:\s*(true|false)/, (v) => v === 'true');
       assignIfMatch(metadata, 'handoff_context', metaSrc, /"handoff_context"\s*:\s*"((?:[^"\\]|\\.)*)"/, (v) => v);
 
