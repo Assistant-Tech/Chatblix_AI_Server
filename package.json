@@ -14,6 +14,9 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
+    "start:pm2": "pm2 start ecosystem.config.js",
+    "reload:pm2": "pm2 reload chatblix-ai-backend",
+    "stop:pm2": "pm2 stop chatblix-ai-backend",
     "test:e2e": "jest --config jest.e2e.config.js --runInBand --forceExit",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\""
@@ -28,6 +31,7 @@
     "bullmq": "^5.44.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "helmet": "^8.2.0",
     "ioredis": "^5.10.1",
     "luxon": "^3.7.2",
     "pg": "^8.20.0",

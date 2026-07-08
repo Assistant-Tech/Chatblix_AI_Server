@@ -10,6 +10,12 @@ import {
 } from 'class-validator';
 
 export class EnvSchema {
+  // Interface the HTTP server binds to. Default binds all interfaces; set to a
+  // specific address (e.g. a WireGuard IP) to keep the service off public ones.
+  @IsOptional()
+  @IsString()
+  HOST: string = '0.0.0.0';
+
   @IsOptional()
   @IsInt()
   @Min(1)

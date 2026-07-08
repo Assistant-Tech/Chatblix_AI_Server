@@ -60,14 +60,19 @@ async function bootstrap(): Promise<void> {
     });
   }
 
+  // PM2 stops instances with SIGINT on reload/stop; shutdown hooks let
+  // @nestjs/bullmq close workers gracefully so in-flight jobs finish.
+  app.enableShutdownHooks();
+
   const config = app.get(AppConfigService);
+  const host = config.host();
   const port = config.port();
 
-  await app.listen(port);
+  await app.listen(port, host);
   const logger = new Logger('Bootstrap');
-  logger.log(`chatblix ai-backend listening on http://localhost:${port}`);
+  logger.log(`chatblix ai-backend listening on http://${host}:${port}`);
   if (swaggerEnabled) {
-    logger.log(`Swagger docs: http://localhost:${port}/ai/v1/docs`);
+    logger.log(`Swagger docs: http://${host}:${port}/ai/v1/docs`);
   }
 }
 

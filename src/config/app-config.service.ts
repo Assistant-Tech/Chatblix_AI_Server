@@ -6,6 +6,10 @@ import type { EnvSchema } from './env.validation';
 export class AppConfigService {
   constructor(private readonly config: ConfigService<EnvSchema, true>) {}
 
+  host(): string {
+    return this.config.get('HOST', { infer: true });
+  }
+
   port(): number {
     return this.config.get('PORT', { infer: true });
   }
