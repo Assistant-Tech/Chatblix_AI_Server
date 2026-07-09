@@ -16,12 +16,14 @@ those belong to the main backend.
 | 0 | [Architecture.md](./Architecture.md) | You want to understand this service's reply pipeline end-to-end. **Start here.** |
 | 1 | [AI_EVOLUTION_ROADMAP.md](./AI_EVOLUTION_ROADMAP.md) | You want where this is headed: prompted pipeline → agentic → RAG. |
 | 2 | [TENANT_ANALYTICS_AGENT.md](./TENANT_ANALYTICS_AGENT.md) | You're working on the tenant analytics agent. |
+| 3 | [TOOL_CAPABILITY_ARCHITECTURE.md](./TOOL_CAPABILITY_ARCHITECTURE.md) | You're designing how per-tenant tools are entitled, gated, and executed (the scalable multi-tool model). |
+| 4 | [INCIDENT_JOB_TIMEOUT_AND_REPLY_TOOL.md](./INCIDENT_JOB_TIMEOUT_AND_REPLY_TOOL.md) | You're debugging `job_timeout`, the `send_message` reply-tool salvage, or `OpenRouter returned no content` (incident 2026-06-25). |
 
 The **cross-repo authoritative design** lives in main-backend's docs — if anything
 here contradicts them, those win:
 
-- [`main-backend/docs/AI_SYSTEM.md`](../../main-backend/docs/AI_SYSTEM.md) — canonical design & implementation reference (profile sync, prompt compile, integration contract)
-- [`main-backend/docs/REDIS_AND_SCALING.md`](../../main-backend/docs/REDIS_AND_SCALING.md) — Redis topology (single shared Redis: main writes `profile:{id}`, ai-backend reads it)
+- [`docs/AI_SYSTEM.md`](../../docs/AI_SYSTEM.md) — canonical design & implementation reference (profile sync, prompt compile, integration contract)
+- [`docs/REDIS_AND_SCALING.md`](../../docs/REDIS_AND_SCALING.md) — Redis topology (single shared Redis: main writes `profile:{id}`, ai-backend reads it)
 - [`main-backend/docs/BUSINESS_PROFILE_API.md`](../../main-backend/docs/BUSINESS_PROFILE_API.md) — the `BusinessProfile` shape, every field
 
 ---
@@ -85,8 +87,8 @@ they belong to the main backend.
 | You want to know... | Go to |
 |---|---|
 | This service's reply pipeline, end-to-end | [`Architecture.md`](./Architecture.md) |
-| The queue job + HTTP fallback contract with main-backend | [`../../main-backend/docs/AI_SYSTEM.md`](../../main-backend/docs/AI_SYSTEM.md) |
+| The queue job + HTTP fallback contract with main-backend | [`../../docs/AI_SYSTEM.md`](../../docs/AI_SYSTEM.md) |
 | The `BusinessProfile` shape (every field) | [`../../main-backend/docs/BUSINESS_PROFILE_API.md`](../../main-backend/docs/BUSINESS_PROFILE_API.md) |
-| Redis topology (who writes/reads `profile:{id}` / `prompt:{id}`) | [`../../main-backend/docs/REDIS_AND_SCALING.md`](../../main-backend/docs/REDIS_AND_SCALING.md) |
+| Redis topology (who writes/reads `profile:{id}` / `prompt:{id}`) | [`../../docs/REDIS_AND_SCALING.md`](../../docs/REDIS_AND_SCALING.md) |
 | Where the architecture is headed (agentic, RAG) | [`AI_EVOLUTION_ROADMAP.md`](./AI_EVOLUTION_ROADMAP.md) |
 | The tenant analytics agent | [`TENANT_ANALYTICS_AGENT.md`](./TENANT_ANALYTICS_AGENT.md) |

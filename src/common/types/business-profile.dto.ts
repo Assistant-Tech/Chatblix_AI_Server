@@ -124,6 +124,9 @@ export class ScheduleEntryDto {
 }
 
 export class HoursDto {
+  @IsBoolean()
+  always_open!: boolean;
+  
   @IsString()
   @MaxLength(64)
   @Validate(IanaTimeZoneConstraint)

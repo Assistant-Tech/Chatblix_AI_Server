@@ -14,10 +14,15 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
+<<<<<<< Updated upstream
     "start:pm2": "pm2 start ecosystem.config.js",
     "reload:pm2": "pm2 reload chatblix-ai-backend",
     "stop:pm2": "pm2 stop chatblix-ai-backend",
+=======
+    "test": "jest --config jest.config.js",
+>>>>>>> Stashed changes
     "test:e2e": "jest --config jest.e2e.config.js --runInBand --forceExit",
+    "eval": "ts-node --transpile-only eval/run.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\""
   },
