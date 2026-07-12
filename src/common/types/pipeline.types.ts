@@ -151,7 +151,7 @@ export interface DoneInternalData {
   triage: Triage;
   attempts: PipelineAttempt[];
   lastEmittedReplyLen: number;
-  escalated?: { reason: string; matched_trigger?: string };
+  escalated?: { reason: string; matched_trigger?: string; handoff_reason?: string };
   duration_ms: number;
   tokensIn: number | null;
   tokensOut: number | null;

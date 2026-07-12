@@ -159,7 +159,15 @@ export class ReplyService {
     // of reply-text rules. Defaults to true when no verdict (nothing to invalidate).
     const metadataValid = lastAttempt?.verdict?.metadata_valid !== false;
 
+    // In-band handoff: the generator (or a synthesized fallback) flagged
+    // handoff_required inside <metadata>. On the 'replied' path this is the ONLY
+    // handoff signal — main-backend reads the same flag from shipped and pauses.
+    // Persist the human-readable reason (handoff_context) on the turn log for audit.
+    const inBandHandoffReason =
+      parsed.metadata?.handoff_required === true ? (parsed.metadata.handoff_context ?? null) : null;
+
     const baseTurnLog: Omit<AiTurnLogData, 'status'> = {
+      handoffReason: inBandHandoffReason,
       triage: (triage ?? {}) as object,
       attempts: (done?.attempts ?? []) as unknown as object,
       validatorPass,
@@ -184,11 +192,18 @@ export class ReplyService {
     if (done?.outcome === 'escalate' || c.escalation) {
       const reasonRaw = c.escalation?.reason ?? done?.escalated?.reason ?? 'unknown';
       const reason = mapEscalationReason(reasonRaw);
-      const handoff = ctx.profile.escalation?.handoff_message ?? parsed.reply ?? '';
+      const matchedTrigger = c.escalation?.matched_trigger ?? done?.escalated?.matched_trigger ?? null;
+      const handoffReason =
+        c.escalation?.handoff_reason ?? done?.escalated?.handoff_reason ?? inBandHandoffReason;
+      // Never ship an empty handoff message. `||` (not `??`) so an empty-string
+      // configured handoff_message falls through to the parsed reply / generic line.
+      const handoff = ctx.profile.escalation?.handoff_message || parsed.reply || GENERIC_HANDOFF;
       const response: ReplyResponseEscalate = {
         status: 'escalate',
         reason,
         suggested_handoff_message: handoff,
+        handoff_reason: handoffReason,
+        matched_trigger: matchedTrigger,
         metadata: {
           triage: triageSummary,
           attempts: done?.attempts?.length ?? 0,
@@ -198,7 +213,7 @@ export class ReplyService {
           trace_id: req.options?.trace_id,
         },
       };
-      return { response, turnLog: { ...baseTurnLog, status: 'escalate' } };
+      return { response, turnLog: { ...baseTurnLog, status: 'escalate', handoffReason } };
     }
 
     // ship_with_violations: validator exhausted retries but the orchestrator
@@ -240,10 +255,14 @@ export class ReplyService {
 
 // ───────── module-level helpers ─────────
 
+// Generic, always-present fallback so an escalate turn never ships an empty
+// customer-facing handoff message (mirrors main-backend's hard-failure fallback).
+const GENERIC_HANDOFF = 'One of our team members will get back to you shortly.';
+
 interface CollectedTurn {
   triage?: Triage;
   done?: DoneInternalData;
-  escalation?: { reason?: string; matched_trigger?: string };
+  escalation?: { reason?: string; matched_trigger?: string; handoff_reason?: string };
 }
 
 function absorbEvent(ev: PipelineEvent, c: CollectedTurn): void {
@@ -252,7 +271,7 @@ function absorbEvent(ev: PipelineEvent, c: CollectedTurn): void {
       c.triage = ev.data as Triage;
       break;
     case 'escalate':
-      c.escalation = ev.data as { reason?: string; matched_trigger?: string };
+      c.escalation = ev.data as { reason?: string; matched_trigger?: string; handoff_reason?: string };
       break;
     case '_done_internal':
       c.done = ev.data as DoneInternalData;
@@ -306,7 +325,17 @@ function buildCustomerContext(history: IncomingHistoryMessage[]): Record<string,
   return ctx;
 }
 
+const KNOWN_ESCALATION_REASONS: ReadonlySet<ReplyResponseEscalate['reason']> = new Set([
+  'validator_exhausted',
+  'triage_handoff',
+  'keyword_match',
+  'max_turns_exceeded',
+  'negative_sentiment',
+  'ai_handoff',
+]);
+
 function mapEscalationReason(raw: string): ReplyResponseEscalate['reason'] {
-  if (raw === 'triage_handoff' || raw === 'keyword_match' || raw === 'validator_exhausted') return raw;
-  return 'unknown';
+  return KNOWN_ESCALATION_REASONS.has(raw as ReplyResponseEscalate['reason'])
+    ? (raw as ReplyResponseEscalate['reason'])
+    : 'unknown';
 }

@@ -114,6 +114,10 @@ export function parseAgentOutput(raw: string, userMessage: string = ''): ParseRe
   if (isComplaint) {
     enforced.handoff_required = true;
     enforced.intent = 'complaint';
+    // A forced handoff with a null reason gives the human agent nothing to act on.
+    // Keep any reason the model already supplied; otherwise default to a concrete one.
+    enforced.handoff_context =
+      enforced.handoff_context ?? 'Customer raised a complaint or problem — needs a human to resolve.';
     enforced.tags = [...new Set([...(enforced.tags ?? []), 'escalation'])];
   }
 

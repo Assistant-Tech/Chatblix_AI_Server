@@ -66,7 +66,15 @@ export class PipelineOrchestratorService {
     return best;
   }
 
-  private synthesizeHandoffCandidate(triage: Triage | null, priorLang: LanguageCode | null): string {
+  // `context` becomes the metadata.handoff_context (the human-readable handoff
+  // reason surfaced to the operator). Each fallback site passes an accurate cause
+  // (system error vs reasoning leak vs phantom order) rather than a single generic
+  // string, so the human picking it up knows why the AI stepped aside.
+  private synthesizeHandoffCandidate(
+    triage: Triage | null,
+    priorLang: LanguageCode | null,
+    context = 'System error during reply generation. Manual response needed.',
+  ): string {
     const lang = (triage?.language?.detected as LanguageCode | undefined) || priorLang || 'romanized_ne';
     let replyText: string;
     if (lang === 'en') {
@@ -84,7 +92,7 @@ export class PipelineOrchestratorService {
       next_step: 'escalate',
       suggested_reply_language: lang,
       handoff_required: true,
-      handoff_context: 'System error during reply generation. Manual response needed.',
+      handoff_context: context,
       tags: ['system_error', 'handoff'],
     };
     return `<reply>${replyText}</reply><metadata>${JSON.stringify(metadata)}</metadata>`;
@@ -133,12 +141,13 @@ export class PipelineOrchestratorService {
       const handoffText =
         ctx.profile.escalation?.handoff_message ||
         extractReplyText(this.synthesizeHandoffCandidate(triage, priorAssistantLang)).trim();
-      const shipped = wrapHandoff(handoffText, escalation.reason, detectedLang);
+      const shipped = wrapHandoff(handoffText, escalation.reason, detectedLang, escalation.handoff_reason);
       yield {
         event: 'escalate',
         data: {
           reason: escalation.reason,
           matched_trigger: escalation.matched_trigger,
+          handoff_reason: escalation.handoff_reason,
         },
       };
       const done: DoneInternalData = {
@@ -148,7 +157,11 @@ export class PipelineOrchestratorService {
         triage,
         attempts: [],
         lastEmittedReplyLen: 0,
-        escalated: { reason: escalation.reason ?? 'unknown', matched_trigger: escalation.matched_trigger },
+        escalated: {
+          reason: escalation.reason ?? 'unknown',
+          matched_trigger: escalation.matched_trigger,
+          handoff_reason: escalation.handoff_reason,
+        },
         duration_ms: Date.now() - tStart,
         tokensIn: accTokensIn || null,
         tokensOut: accTokensOut || null,
@@ -377,7 +390,11 @@ export class PipelineOrchestratorService {
           });
           continue;
         }
-        candidate = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
+        candidate = this.synthesizeHandoffCandidate(
+          triage,
+          priorAssistantLang,
+          'The AI failed to generate a reply after retries. A human should respond.',
+        );
       }
 
       // Deterministically fix forbidden typography (em/en dashes → hyphen) BEFORE
@@ -460,7 +477,13 @@ export class PipelineOrchestratorService {
     }
 
     if (!shipped || !hasReplyBody || reasoningLeaked) {
-      shipped = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
+      shipped = this.synthesizeHandoffCandidate(
+        triage,
+        priorAssistantLang,
+        reasoningLeaked
+          ? 'The AI reply contained leaked internal reasoning and was withheld. A human should respond.'
+          : 'The AI could not produce a usable reply. A human should respond.',
+      );
       outcome = 'ship_with_violations';
       this.metrics.bump('turn_ship_with_violations');
     }
@@ -478,7 +501,11 @@ export class PipelineOrchestratorService {
           `conv=${ctx.conversation_id ?? '-'} trace_id=${ctx.trace_id ?? '-'} product=${JSON.stringify(grounded.product ?? null)}`,
       );
       this.metrics.bump('turn_phantom_order_blocked');
-      shipped = this.synthesizeHandoffCandidate(triage, priorAssistantLang);
+      shipped = this.synthesizeHandoffCandidate(
+        triage,
+        priorAssistantLang,
+        'The AI confirmed an order for a product that could not be grounded in the catalog. A human must verify before promising delivery.',
+      );
       outcome = 'ship_with_violations';
       this.metrics.bump('turn_ship_with_violations');
     }
@@ -611,11 +638,17 @@ function extractReplyText(candidate: string): string {
   return m ? m[1] : candidate;
 }
 
-function wrapHandoff(text: string, reason: string | undefined, lang: LanguageCode = 'romanized_ne'): string {
+function wrapHandoff(
+  text: string,
+  reason: string | undefined,
+  lang: LanguageCode = 'romanized_ne',
+  handoffReason?: string,
+): string {
   const metadata = {
     next_step: 'escalate',
     handoff_required: true,
-    handoff_context: `escalation:${reason ?? 'unknown'}`,
+    // Prefer the human-readable reason; fall back to the category tag only if absent.
+    handoff_context: handoffReason?.trim() || `escalation:${reason ?? 'unknown'}`,
     suggested_reply_language: lang,
     tags: ['escalate', reason ?? 'unknown'],
   };

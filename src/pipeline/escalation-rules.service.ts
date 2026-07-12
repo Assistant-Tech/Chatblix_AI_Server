@@ -25,7 +25,18 @@ export interface EscalationCheckResult {
   escalate: boolean;
   reason?: EscalationReason;
   matched_trigger?: string;
+  // Human-readable explanation of WHY a human is needed, carried forward so the
+  // operator queue shows something meaningful instead of a bare category code.
+  handoff_reason?: string;
 }
+
+// Static fallbacks for reasons the triage model does not describe in free text.
+const REASON_TEXT: Record<EscalationReason, string> = {
+  triage_handoff: 'The AI decided a human should take over this conversation.',
+  keyword_match: 'The customer used a phrase configured to require a human.',
+  max_turns_exceeded: 'The conversation reached the configured turn limit without resolving.',
+  negative_sentiment: 'The customer sounded upset — routed to a human.',
+};
 
 interface CompiledTrigger {
   re: RegExp;
@@ -52,7 +63,12 @@ export class EscalationRulesService {
     // Greetings, questions, and general discovery are handled by the generator —
     // do NOT silence it even if the triage model flags handoff_required.
     if (triage?.handoff_required && HUMAN_REQUIRED_INTENTS.has(triage.intent_path)) {
-      return { escalate: true, reason: 'triage_handoff' };
+      // Prefer the triage model's specific free-text reason; fall back to a generic one.
+      return {
+        escalate: true,
+        reason: 'triage_handoff',
+        handoff_reason: triage.handoff_reason?.trim() || REASON_TEXT.triage_handoff,
+      };
     }
 
     const { max_turns, sentiment_threshold, triggers } = profile.escalation ?? {};
@@ -60,7 +76,11 @@ export class EscalationRulesService {
     if (max_turns !== undefined) {
       const aiTurns = history.filter((h) => h.role === 'assistant').length;
       if (aiTurns >= max_turns) {
-        return { escalate: true, reason: 'max_turns_exceeded' };
+        return {
+          escalate: true,
+          reason: 'max_turns_exceeded',
+          handoff_reason: `Conversation reached ${aiTurns} AI turns (limit ${max_turns}) without resolving.`,
+        };
       }
     }
 
@@ -71,7 +91,11 @@ export class EscalationRulesService {
           ? s === 'very_negative'
           : s === 'negative' || s === 'very_negative';
       if (shouldEscalate) {
-        return { escalate: true, reason: 'negative_sentiment' };
+        return {
+          escalate: true,
+          reason: 'negative_sentiment',
+          handoff_reason: `Customer sentiment is ${s} — routed to a human.`,
+        };
       }
     }
 
@@ -82,7 +106,12 @@ export class EscalationRulesService {
     const lower = message.toLowerCase();
     for (const { re, trigger } of this.getCompiledTriggers(triggers)) {
       if (re.test(lower)) {
-        return { escalate: true, reason: 'keyword_match', matched_trigger: trigger };
+        return {
+          escalate: true,
+          reason: 'keyword_match',
+          matched_trigger: trigger,
+          handoff_reason: `Customer used the trigger phrase "${trigger}".`,
+        };
       }
     }
     return { escalate: false };

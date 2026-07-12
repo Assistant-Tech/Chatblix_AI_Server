@@ -3,6 +3,9 @@ import type { ReplyResponse } from './reply.dto';
 // Data collected during the pipeline run that main-backend writes to turn_logs table.
 export interface AiTurnLogData {
   status: string;
+  // Human-readable handoff reason for escalate turns (from triage.handoff_reason
+  // or the generator's <metadata>.handoff_context). Null on non-handoff turns.
+  handoffReason?: string | null;
   triage: object;
   attempts: object;
   validatorPass: boolean;

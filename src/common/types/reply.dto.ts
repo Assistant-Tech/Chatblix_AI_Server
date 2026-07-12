@@ -187,10 +187,28 @@ export interface ReplyResponseReplied {
   metadata: ReplyMetadata;
 }
 
+// Machine category for WHY the handoff happened. `ai_handoff` = the generator
+// itself flagged handoff_required inside its <metadata> (in-band handoff), as
+// opposed to a deterministic pre-generator rule.
+export type EscalationReasonCode =
+  | 'validator_exhausted'
+  | 'triage_handoff'
+  | 'keyword_match'
+  | 'max_turns_exceeded'
+  | 'negative_sentiment'
+  | 'ai_handoff'
+  | 'unknown';
+
 export interface ReplyResponseEscalate {
   status: 'escalate';
-  reason: 'validator_exhausted' | 'triage_handoff' | 'keyword_match' | 'unknown';
+  reason: EscalationReasonCode;
   suggested_handoff_message: string;
+  // Human-readable explanation of WHY a human is needed (from triage.handoff_reason
+  // or the generator's <metadata>.handoff_context). Surfaced to the operator queue.
+  // Distinct from suggested_handoff_message, which is the customer-facing text.
+  handoff_reason?: string | null;
+  // The keyword that triggered a keyword_match escalation, when applicable.
+  matched_trigger?: string | null;
   metadata: ReplyMetadata;
 }
 

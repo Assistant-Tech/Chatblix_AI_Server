@@ -10,6 +10,7 @@ export function synthesizeFallbackTriage(input: SynthesizeFallbackTriageInput = 
   const { priorAssistantLang = null, stalledCountIncoming = 0, reason = 'triage_unavailable' } = input;
 
   const detected: LanguageCode = priorAssistantLang ?? 'romanized_ne';
+  const stalled = stalledCountIncoming >= 2;
 
   return {
     language: {
@@ -20,7 +21,12 @@ export function synthesizeFallbackTriage(input: SynthesizeFallbackTriageInput = 
         ? `Inherited from prior assistant turn (${reason}).`
         : null,
     },
-    intent_path: 'confusion',
+    // When the conversation has stalled we set handoff_required below, but the
+    // handoff only actually fires if intent_path is in EscalationRulesService's
+    // HUMAN_REQUIRED_INTENTS. 'confusion' is NOT in that set, so a stalled fallback
+    // would silently fail to escalate — use 'reasking' (which IS) so the handoff
+    // and its synthesized handoff_reason take effect.
+    intent_path: stalled ? 'reasking' : 'confusion',
     concern: null,
     named_product: null,
     extracted_data_delta: {
@@ -43,8 +49,8 @@ export function synthesizeFallbackTriage(input: SynthesizeFallbackTriageInput = 
     explicit_price_ask: false,
     process_question_topic: null,
     edge_case_flags: [],
-    handoff_required: stalledCountIncoming >= 2,
-    handoff_reason: stalledCountIncoming >= 2 ? 'Stalled count threshold reached during triage failure.' : null,
+    handoff_required: stalled,
+    handoff_reason: stalled ? 'Stalled count threshold reached during triage failure.' : null,
     stalled_count: stalledCountIncoming,
     notes_for_generator: `Triage degraded (${reason}); re-explain shorter, ask ONE specific thing.`,
     _synthesized: true,
