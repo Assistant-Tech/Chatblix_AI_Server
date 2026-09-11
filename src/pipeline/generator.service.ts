@@ -6,6 +6,8 @@ import { selectToolsForProfile } from './tools.registry';
 import { OpenRouterMessage, ChatStreamEvent, cachedSystemMessage } from './openrouter.client';
 import { compactHistory } from './history-context';
 import { MetricsService } from './metrics.service';
+import { extractJsonObject } from '../common/utils/pipeline/contracts';
+import type { DigestRequestDto } from '../common/types/digest.dto';
 import type {
   ContextPacket,
   Triage,
@@ -30,6 +32,18 @@ export interface StreamGeneratorInput {
 }
 
 export type GeneratorEvent = ChatStreamEvent;
+
+/** Structured output of a digest generation. `null` fields mean the provider omitted usage. */
+export interface DigestGenerationResult {
+  summary: string;
+  attentionItems: string[];
+  model: string;
+  tokensIn: number | null;
+  tokensOut: number | null;
+}
+
+/** Cap on the digest completion — 2-4 sentences plus at most 5 short items. */
+const DIGEST_MAX_TOKENS = 700;
 
 // Assistant-turn prefill that forces the reply to begin with the output contract's
 // opening tag. Kept as the bare tag so the model streams only the reply body after it.
@@ -146,4 +160,91 @@ export class GeneratorService {
       throw e;
     }
   }
+
+  // ─── Digest ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Turns a window of aggregated stats into an owner-facing narrative plus
+   * explicit attention items, for the `ai.digest` queue.
+   *
+   * Shares this service's LLM client, prompt loader, model config and metrics
+   * with the reply path — only the prompt and the call shape differ. It is
+   * deliberately NOT the streaming reply path: there is no customer waiting on
+   * first-token latency, no tools to expose, no `<reply>` output contract, and
+   * the caller needs a parsed object rather than a stream. So it goes through
+   * `chatJson`, exactly as triage and the validator do for their JSON contracts.
+   *
+   * Throws on a transport failure or on unparseable output — DigestService
+   * decides whether to fall back or let the job retry.
+   */
+  async generateDigest(req: DigestRequestDto): Promise<DigestGenerationResult> {
+    const model = this.config.digestModel();
+    const system = await this.prompts.getDigestPrompt(req.business_name);
+    const user = [
+      `BUSINESS_NAME: ${req.business_name}`,
+      `LANGUAGE: ${req.language || 'en'}`,
+      `WINDOW: ${JSON.stringify(req.window)}`,
+      `STATS: ${JSON.stringify(req.stats)}`,
+    ].join('\n\n');
+
+    let response: Awaited<ReturnType<LLMClientService['chatJson']>>;
+    try {
+      response = await this.llmClient.chatJson(
+        {
+          model,
+          system,
+          user,
+          // Low but not zero: the digest should read like a person wrote it,
+          // while staying anchored to the numbers it was handed.
+          temperature: 0.3,
+          maxTokens: DIGEST_MAX_TOKENS,
+          timeoutMs: this.config.digestTimeoutMs(),
+        },
+        { stage: 'digest', business_id: req.business_id, trace_id: req.options?.trace_id },
+      );
+    } catch (e) {
+      const err = e as { kind?: string };
+      this.logger.error(
+        `digest generation failed model=${model} business_id=${req.business_id} trace_id=${req.options?.trace_id ?? '-'} kind=${err?.kind ?? 'unknown'}: ${(e as Error).message}`,
+      );
+      if (err?.kind === 'timeout') this.metrics.bump('digest_timeout');
+      else this.metrics.bump('digest_api_error');
+      throw e;
+    }
+
+    const parsed = parseDigestOutput(response.text);
+    if (!parsed) {
+      this.metrics.bump('digest_json_parse_error');
+      throw new Error('digest_unparseable_output');
+    }
+
+    return {
+      summary: parsed.summary,
+      attentionItems: parsed.attentionItems,
+      model,
+      tokensIn: response.usage?.prompt_tokens ?? null,
+      tokensOut: response.usage?.completion_tokens ?? null,
+    };
+  }
+}
+
+/**
+ * Parses the digest contract out of the model's response. Reuses
+ * `extractJsonObject`, which already strips code fences and leading prose — the
+ * same salvage the triage parser relies on. Returns null when the response has
+ * no usable summary, so the caller can fall back rather than ship an empty digest.
+ */
+export function parseDigestOutput(raw: string): { summary: string; attentionItems: string[] } | null {
+  const obj = extractJsonObject(raw);
+  if (!obj || typeof obj !== 'object') return null;
+
+  const record = obj as Record<string, unknown>;
+  const summary = typeof record.summary === 'string' ? record.summary.trim() : '';
+  if (!summary) return null;
+
+  const items = Array.isArray(record.attentionItems)
+    ? record.attentionItems.filter((i): i is string => typeof i === 'string' && i.trim().length > 0).map((i) => i.trim())
+    : [];
+
+  return { summary, attentionItems: items };
 }

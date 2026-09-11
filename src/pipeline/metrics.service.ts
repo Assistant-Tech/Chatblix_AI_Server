@@ -14,6 +14,11 @@ interface Counters {
   validator_soft_pass_on_error: number;
   tool_iteration_cap_hit: number;
   reply_tool_salvaged: number;
+  digest_api_error: number;
+  digest_timeout: number;
+  digest_json_parse_error: number;
+  digest_fallback_used: number;
+  digest_total: number;
   violations_by_rule: Record<string, number>;
   total_turns: number;
   [key: string]: number | Record<string, number>;
@@ -35,6 +40,11 @@ export class MetricsService {
     validator_soft_pass_on_error: 0,
     tool_iteration_cap_hit: 0,
     reply_tool_salvaged: 0,
+    digest_api_error: 0,
+    digest_timeout: 0,
+    digest_json_parse_error: 0,
+    digest_fallback_used: 0,
+    digest_total: 0,
     violations_by_rule: {},
     total_turns: 0,
   };

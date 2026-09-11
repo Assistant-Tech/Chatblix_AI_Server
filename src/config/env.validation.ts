@@ -60,6 +60,12 @@ export class EnvSchema {
   @IsString()
   PIPELINE_VALIDATOR_MODEL: string = 'anthropic/claude-haiku-4.5';
 
+  // Model for the internal operations digest. Empty = reuse the generator model.
+  // The digest is a short, low-stakes summary, so a cheaper tier is usually right.
+  @IsOptional()
+  @IsString()
+  PIPELINE_DIGEST_MODEL: string = 'anthropic/claude-haiku-4.5';
+
   @IsOptional()
   @IsInt()
   @Min(100)
@@ -74,6 +80,11 @@ export class EnvSchema {
   @IsInt()
   @Min(100)
   PIPELINE_VALIDATOR_TIMEOUT_MS: number = 4500;
+
+  @IsOptional()
+  @IsInt()
+  @Min(100)
+  PIPELINE_DIGEST_TIMEOUT_MS: number = 20_000;
 
   @IsOptional()
   @IsInt()
@@ -101,6 +112,13 @@ export class EnvSchema {
   @IsInt()
   @Min(1000)
   WORKER_JOB_TIMEOUT_MS: number = 45_000;
+
+  // Wall-clock budget for one ai.digest job — a single JSON call plus parsing,
+  // so it needs far less than a reply turn.
+  @IsOptional()
+  @IsInt()
+  @Min(1000)
+  DIGEST_JOB_TIMEOUT_MS: number = 30_000;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvSchema {

@@ -6,6 +6,7 @@ interface CachedPrompts {
   triage: string;
   generator: string;
   validator: string;
+  digest: string;
 }
 
 @Injectable()
@@ -28,12 +29,13 @@ export class PromptsService implements OnModuleInit {
 
   private async loadAll(): Promise<CachedPrompts> {
     if (this.cached) return this.cached;
-    const [triage, generator, validator] = await Promise.all([
+    const [triage, generator, validator, digest] = await Promise.all([
       readFile(join(this.PROMPT_DIR, '01_triage.md'), 'utf-8'),
       readFile(join(this.PROMPT_DIR, '02_generator.md'), 'utf-8'),
       readFile(join(this.PROMPT_DIR, '03_validator.md'), 'utf-8'),
+      readFile(join(this.PROMPT_DIR, '04_digest.md'), 'utf-8'),
     ]);
-    this.cached = { triage, generator, validator };
+    this.cached = { triage, generator, validator, digest };
     return this.cached;
   }
 
@@ -49,6 +51,12 @@ export class PromptsService implements OnModuleInit {
   async getGeneratorPrompt(businessName: string): Promise<string> {
     const { generator } = await this.loadAll();
     return this.substitute(generator, businessName);
+  }
+
+  /** Internal operations digest (ai.digest queue) — not part of the reply pipeline. */
+  async getDigestPrompt(businessName: string): Promise<string> {
+    const { digest } = await this.loadAll();
+    return this.substitute(digest, businessName);
   }
 
   async getValidatorPrompt(): Promise<string> {

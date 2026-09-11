@@ -56,6 +56,15 @@ export class AppConfigService {
     return this.config.get('PIPELINE_VALIDATOR_MODEL', { infer: true });
   }
 
+  /**
+   * Model for the internal operations digest. Falls back to the generator model
+   * when unset, since the digest reuses GeneratorService — set it explicitly to
+   * run digests on a cheaper tier than customer replies.
+   */
+  digestModel(): string {
+    return this.config.get('PIPELINE_DIGEST_MODEL', { infer: true }) || this.generatorModel();
+  }
+
   triageTimeoutMs(): number {
     return this.config.get('PIPELINE_TRIAGE_TIMEOUT_MS', { infer: true });
   }
@@ -66,6 +75,10 @@ export class AppConfigService {
 
   validatorTimeoutMs(): number {
     return this.config.get('PIPELINE_VALIDATOR_TIMEOUT_MS', { infer: true });
+  }
+
+  digestTimeoutMs(): number {
+    return this.config.get('PIPELINE_DIGEST_TIMEOUT_MS', { infer: true });
   }
 
   maxRetries(): number {
@@ -80,6 +93,14 @@ export class AppConfigService {
    */
   workerJobTimeoutMs(): number {
     return this.config.get('WORKER_JOB_TIMEOUT_MS', { infer: true });
+  }
+
+  /**
+   * Wall-clock budget for one ai.digest job. A digest is a single JSON call, so
+   * it needs far less headroom than a reply turn's triage + generate + validate.
+   */
+  digestJobTimeoutMs(): number {
+    return this.config.get('DIGEST_JOB_TIMEOUT_MS', { infer: true });
   }
 
   maxHistoryTurns(): number {
