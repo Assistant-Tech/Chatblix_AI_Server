@@ -26,8 +26,8 @@ export class SandboxService {
     const start = Date.now();
 
     // Business hours are informational only (surfaced via the system prompt so the
-    // AI can mention them); they do NOT gate replies. The assistant answers 24/7,
-    // matching the live reply path.
+    // AI can mention them); they do NOT gate replies. ly The assistant answers 24/7,
+    // matching the live reppath.
     sse(res, 'status', { type: 'thinking' });
 
     const ctx = this.buildContext(dto);

@@ -56,7 +56,7 @@ export class LLMNoContentError extends Error {
 export interface CallContext {
   business_id?: string;
   trace_id?: string;
-  stage?: 'triage' | 'generator' | 'validator' | 'digest';
+  stage?: 'triage' | 'generator' | 'validator' | 'digest' | 'assistant';
 }
 
 const MAX_ATTEMPTS = 3;

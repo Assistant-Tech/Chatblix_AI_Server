@@ -65,6 +65,21 @@ export class AppConfigService {
     return this.config.get('PIPELINE_DIGEST_MODEL', { infer: true }) || this.generatorModel();
   }
 
+  /** Model for the digest assistant. Falls back to the generator model when unset, like the digest. */
+  assistantModel(): string {
+    return this.config.get('PIPELINE_ASSISTANT_MODEL', { infer: true }) || this.generatorModel();
+  }
+
+  /** Budget for one streamed assistant pass. */
+  assistantTimeoutMs(): number {
+    return this.config.get('PIPELINE_ASSISTANT_TIMEOUT_MS', { infer: true });
+  }
+
+  /** Budget for a whole assistant turn, all passes and tool calls included. */
+  assistantTurnTimeoutMs(): number {
+    return this.config.get('ASSISTANT_TURN_TIMEOUT_MS', { infer: true });
+  }
+
   triageTimeoutMs(): number {
     return this.config.get('PIPELINE_TRIAGE_TIMEOUT_MS', { infer: true });
   }

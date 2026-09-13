@@ -7,6 +7,7 @@ interface CachedPrompts {
   generator: string;
   validator: string;
   digest: string;
+  assistant: string;
 }
 
 @Injectable()
@@ -29,13 +30,14 @@ export class PromptsService implements OnModuleInit {
 
   private async loadAll(): Promise<CachedPrompts> {
     if (this.cached) return this.cached;
-    const [triage, generator, validator, digest] = await Promise.all([
+    const [triage, generator, validator, digest, assistant] = await Promise.all([
       readFile(join(this.PROMPT_DIR, '01_triage.md'), 'utf-8'),
       readFile(join(this.PROMPT_DIR, '02_generator.md'), 'utf-8'),
       readFile(join(this.PROMPT_DIR, '03_validator.md'), 'utf-8'),
       readFile(join(this.PROMPT_DIR, '04_digest.md'), 'utf-8'),
+      readFile(join(this.PROMPT_DIR, '05_assistant.md'), 'utf-8'),
     ]);
-    this.cached = { triage, generator, validator, digest };
+    this.cached = { triage, generator, validator, digest, assistant };
     return this.cached;
   }
 
@@ -57,6 +59,12 @@ export class PromptsService implements OnModuleInit {
   async getDigestPrompt(businessName: string): Promise<string> {
     const { digest } = await this.loadAll();
     return this.substitute(digest, businessName);
+  }
+
+  /** Owner-facing digest assistant (POST /assistant/stream) — not part of the reply pipeline. */
+  async getAssistantPrompt(businessName: string): Promise<string> {
+    const { assistant } = await this.loadAll();
+    return this.substitute(assistant, businessName);
   }
 
   async getValidatorPrompt(): Promise<string> {

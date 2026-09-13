@@ -1,4 +1,5 @@
 import { ToolExecutorService } from './tool-executor.service';
+import { ASSISTANT_TOOL_NAMES } from '../assistant/assistant-tools.registry';
 
 function makeExecutor(): ToolExecutorService {
   return new ToolExecutorService({
@@ -20,6 +21,15 @@ describe('ToolExecutorService.execute', () => {
     const fetchSpy = jest.spyOn(global, 'fetch');
     const out = await makeExecutor().execute('mystery', '{}', CTX);
     expect(JSON.parse(out)).toEqual({ error: 'Unknown tool: mystery' });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // The digest assistant's owner tools read any transcript in the tenant. They must
+  // never be reachable from the customer reply path.
+  it.each(ASSISTANT_TOOL_NAMES)('rejects the owner tool %s as unknown without calling out', async (name) => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const out = await makeExecutor().execute(name, '{}', CTX);
+    expect(JSON.parse(out)).toEqual({ error: `Unknown tool: ${name}` });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

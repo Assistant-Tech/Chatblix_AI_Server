@@ -66,6 +66,12 @@ export class EnvSchema {
   @IsString()
   PIPELINE_DIGEST_MODEL: string = 'anthropic/claude-haiku-4.5';
 
+  // Model for the owner-facing digest assistant (POST /assistant/stream). Empty =
+  // reuse the generator model. It answers the business owner, never a customer.
+  @IsOptional()
+  @IsString()
+  PIPELINE_ASSISTANT_MODEL: string = 'anthropic/claude-haiku-4.5';
+
   @IsOptional()
   @IsInt()
   @Min(100)
@@ -85,6 +91,19 @@ export class EnvSchema {
   @IsInt()
   @Min(100)
   PIPELINE_DIGEST_TIMEOUT_MS: number = 20_000;
+
+  // One streamed assistant pass (one LLM call). A turn makes several.
+  @IsOptional()
+  @IsInt()
+  @Min(100)
+  PIPELINE_ASSISTANT_TIMEOUT_MS: number = 30_000;
+
+  // Wall-clock budget for a whole assistant turn: every pass plus every tool call.
+  // Keep it under main-backend's 120s relay timeout.
+  @IsOptional()
+  @IsInt()
+  @Min(1000)
+  ASSISTANT_TURN_TIMEOUT_MS: number = 90_000;
 
   @IsOptional()
   @IsInt()

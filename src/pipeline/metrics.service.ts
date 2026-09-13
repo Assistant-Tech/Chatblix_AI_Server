@@ -19,6 +19,14 @@ interface Counters {
   digest_json_parse_error: number;
   digest_fallback_used: number;
   digest_total: number;
+  assistant_turns: number;
+  assistant_tool_calls: number;
+  assistant_tool_errors: number;
+  assistant_iteration_cap_hit: number;
+  assistant_timeout: number;
+  assistant_provider_error: number;
+  assistant_aborted: number;
+  assistant_no_answer: number;
   violations_by_rule: Record<string, number>;
   total_turns: number;
   [key: string]: number | Record<string, number>;
@@ -45,6 +53,14 @@ export class MetricsService {
     digest_json_parse_error: 0,
     digest_fallback_used: 0,
     digest_total: 0,
+    assistant_turns: 0,
+    assistant_tool_calls: 0,
+    assistant_tool_errors: 0,
+    assistant_iteration_cap_hit: 0,
+    assistant_timeout: 0,
+    assistant_provider_error: 0,
+    assistant_aborted: 0,
+    assistant_no_answer: 0,
     violations_by_rule: {},
     total_turns: 0,
   };
