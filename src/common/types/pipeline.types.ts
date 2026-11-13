@@ -87,8 +87,10 @@ export interface IncomingHistoryMessage {
 // Compact summary of an order already placed for this conversation. Set by
 // main-backend so the generator knows an order exists and can stop re-confirming.
 export interface ExistingOrderInfo {
-  ref: string;
+  ref: string; // customer-facing order reference: store prefix + display id, e.g. "#1042"
   status: string;
+  paymentStatus?: string; // absent on older backend payloads
+  fulfillmentStatus?: string;
   paymentMethod?: string | null;
   total: number; // integer minor units (paisa/cents)
   currency?: 'NPR' | 'USD'; // absent on older backend payloads: default NPR

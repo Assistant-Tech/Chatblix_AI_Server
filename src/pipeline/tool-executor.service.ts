@@ -28,7 +28,7 @@ export class ToolExecutorService {
       case 'stock_check':
         return this.executeStockCheck(args, ctx.business_id);
       case 'order_lookup':
-        return this.executeOrderLookup(args, ctx.business_id);
+        return this.executeOrderLookup(args, ctx);
       case 'capture_lead':
         return this.executeCaptureLead(args, ctx);
       case 'place_order':
@@ -50,14 +50,19 @@ export class ToolExecutorService {
     });
   }
 
-  private async executeOrderLookup(args: string, businessId: string): Promise<string> {
+  private async executeOrderLookup(args: string, ctx: ToolContext): Promise<string> {
     const parsed = parseArgs(args);
     if (!parsed) return JSON.stringify({ error: 'Invalid JSON arguments' });
     if (!parsed.order_id) return JSON.stringify({ error: 'Missing required argument: order_id' });
+    const orderId = String(parsed.order_id);
+    // Order numbers ("#12") are sequential, so a lookup is only ever scoped to this
+    // conversation's customer (server-injected). No live conversation (sandbox) → nothing.
+    if (!ctx.conversation_id) return JSON.stringify({ message: `No order found matching '${orderId}'.` });
 
     return this.callInternalTool('order_lookup', 'order-lookup', {
-      tenantId: businessId,
-      orderId: String(parsed.order_id),
+      tenantId: ctx.business_id,
+      orderId,
+      conversationId: ctx.conversation_id,
     });
   }
 

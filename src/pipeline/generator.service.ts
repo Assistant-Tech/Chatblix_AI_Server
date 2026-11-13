@@ -12,6 +12,7 @@ import type {
   Triage,
   Violation,
 } from '../common/types/pipeline.types';
+import { orderStatusLabel } from '../common/utils/order-status';
 
 export interface GeneratorFeedback {
   previous_attempt: string;
@@ -59,9 +60,14 @@ export class GeneratorService {
     // stops re-confirming / re-running STAGE 3 and can surface the tracking ref.
     if (ctx.existing_order) {
       // total arrives as integer minor units: the LLM only ever sees formatted major units.
-      const { total, currency, ...rest } = ctx.existing_order;
+      // status is one customer-facing label (order + fulfillment + payment), never raw enums.
+      const { total, currency, status, paymentStatus, fulfillmentStatus, ...rest } = ctx.existing_order;
       parts.push(
-        `EXISTING_ORDER: ${JSON.stringify({ ...rest, total: formatMoney(total, currency ?? DEFAULT_CURRENCY) })}`,
+        `EXISTING_ORDER: ${JSON.stringify({
+          ...rest,
+          status: orderStatusLabel(status, paymentStatus, fulfillmentStatus),
+          total: formatMoney(total, currency ?? DEFAULT_CURRENCY),
+        })}`,
       );
     }
     if (feedback) {
