@@ -1,3 +1,7 @@
+import 'reflect-metadata';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+import { ExistingOrderDto } from '../types/reply.dto';
 import { formatMoney } from './money';
 import { GeneratorService } from '../../pipeline/generator.service';
 
@@ -28,5 +32,19 @@ describe('generator EXISTING_ORDER prompt', () => {
 
   it('falls back to NPR when currency is missing', () => {
     expect(build({ ref: 'T', status: 'PENDING', total: 2500, items: [] })).toContain('NPR 25.00');
+  });
+});
+
+describe('ExistingOrderDto total tolerance', () => {
+  it('accepts a fractional minor-unit total and formats it without throwing', () => {
+    const dto = plainToInstance(ExistingOrderDto, {
+      ref: 'T', status: 'PENDING', total: 2499.5, currency: 'NPR', items: [],
+    });
+    expect(validateSync(dto)).toEqual([]);
+    expect(() => formatMoney(dto.total, 'NPR')).not.toThrow();
+  });
+  it('rejects a negative total', () => {
+    const dto = plainToInstance(ExistingOrderDto, { ref: 'T', status: 'PENDING', total: -1, items: [] });
+    expect(validateSync(dto).length).toBeGreaterThan(0);
   });
 });

@@ -73,8 +73,9 @@ export class ExistingOrderDto {
   @MaxLength(40)
   paymentMethod?: string | null;
 
-  // integer minor units (paisa/cents)
-  @IsInt()
+  // minor units (paisa/cents); kept lenient (not @IsInt) so a stray fraction never rejects the request
+  @IsNumber()
+  @Min(0)
   total!: number;
 
   @IsOptional()
