@@ -23,17 +23,25 @@ describe('ToolExecutorService.execute', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('routes order_lookup with tenant-injected body', async () => {
+  it('routes order_lookup with tenant and conversation injected (R4b: scoped to this customer)', async () => {
     const fetchSpy = jest
       .spyOn(global, 'fetch')
-      .mockResolvedValue(okResponse({ orderRef: 'TRK1', status: 'SHIPPED' }));
+      .mockResolvedValue(okResponse({ orderRef: '#12', status: 'SHIPPED' }));
 
-    const out = await makeExecutor().execute('order_lookup', '{"order_id":"TRK1"}', CTX);
+    const out = await makeExecutor().execute('order_lookup', '{"order_id":"#12","conversationId":"someone-else"}', CTX);
 
-    expect(JSON.parse(out)).toEqual({ orderRef: 'TRK1', status: 'SHIPPED' });
+    expect(JSON.parse(out)).toEqual({ orderRef: '#12', status: 'SHIPPED' });
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe('http://main:3000/api/v1/internal/ai/tools/order-lookup');
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ tenantId: 'biz_1', orderId: 'TRK1' });
+    // conversationId is server-injected, never taken from the LLM's arguments.
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({ tenantId: 'biz_1', orderId: '#12', conversationId: 'conv_1' });
+  });
+
+  it('order_lookup without a live conversation (sandbox) resolves nothing and never calls out', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const out = await makeExecutor().execute('order_lookup', '{"order_id":"#12"}', { business_id: 'biz_1' });
+    expect(JSON.parse(out)).toEqual({ message: "No order found matching '#12'." });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('routes capture_lead with server-injected conversation/contact ids', async () => {

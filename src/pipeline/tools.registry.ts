@@ -31,7 +31,7 @@ export const ORDER_LOOKUP_TOOL: OpenRouterTool = {
         order_id: {
           type: 'string',
           description:
-            'The order number or tracking number the customer provides (e.g., "TRK12345" or an order id).',
+            'The order number or tracking number the customer provides (e.g., "#1042" or "TRK12345").',
         },
       },
       required: ['order_id'],
