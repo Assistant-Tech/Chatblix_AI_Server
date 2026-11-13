@@ -30,4 +30,11 @@ describe('assistant tool registry', () => {
       expect(schemaOf(tool)).toMatchObject({ type: 'object', additionalProperties: false });
     }
   });
+
+  it('shows list_orders the split order/payment/fulfillment vocabulary', () => {
+    const props = schemaOf(ASSISTANT_TOOLS.find((t) => t.function.name === 'list_orders')!).properties as Record<string, { enum?: string[] }>;
+    expect(props.status.enum).toEqual(['DRAFT', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'ARCHIVED']);
+    expect(props.payment_status.enum).toContain('CAPTURED');
+    expect(props.fulfillment_status.enum).toContain('SHIPPED');
+  });
 });

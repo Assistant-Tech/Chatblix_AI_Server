@@ -6,7 +6,9 @@ import {
   CONVERSATION_FILTERS,
   LIST_LIMIT,
   MESSAGE_LIMIT,
+  FULFILLMENT_STATUSES,
   ORDER_STATUSES,
+  PAYMENT_STATUSES,
   PERIOD_METRICS,
   PERIODS,
 } from './assistant-tools.registry';
@@ -41,6 +43,14 @@ export interface AssistantToolResult {
 
 type Bounds = { min: number; max: number; default: number };
 type Built = { args: Record<string, unknown>; body: Record<string, unknown> } | { error: string };
+
+const LEGACY_ORDER_STATUS: Record<string, Record<string, string>> = {
+  SHIPPED: { fulfillmentStatus: 'SHIPPED' },
+  DELIVERED: { fulfillmentStatus: 'DELIVERED' },
+  PAID: { paymentStatus: 'CAPTURED' },
+  PAYMENT_FAILED: { paymentStatus: 'REQUIRES_ACTION' },
+  PROCESSING: { status: 'PENDING' },
+};
 
 @Injectable()
 export class AssistantToolExecutorService {
@@ -168,11 +178,28 @@ function buildRequest(name: string, a: Record<string, unknown>): Built {
       const limit = clamp(a.limit, LIST_LIMIT);
       const args: Record<string, unknown> = { limit };
       const body: Record<string, unknown> = { limit };
-      if (a.status !== undefined && a.status !== null && a.status !== '') {
-        const status = typeof a.status === 'string' ? a.status.trim().toUpperCase() : '';
-        if (!isOneOf(ORDER_STATUSES, status)) return { error: `status must be one of: ${ORDER_STATUSES.join(', ')}` };
-        args.status = body.status = status;
+      const pick = (v: unknown) => (v === undefined || v === null || v === '' ? undefined : typeof v === 'string' ? v.trim().toUpperCase() : null);
+      const status = pick(a.status);
+      const payment = pick(a.payment_status);
+      const fulfillment = pick(a.fulfillment_status);
+      const q: Record<string, string> = {};
+      if (status !== undefined) {
+        // Legacy values the model may still produce map onto the split fields.
+        const legacy = LEGACY_ORDER_STATUS[status ?? ''];
+        if (legacy) Object.assign(q, legacy);
+        else if (isOneOf(ORDER_STATUSES, status)) q.status = status;
+        else return { error: `status must be one of: ${ORDER_STATUSES.join(', ')}` };
       }
+      if (payment !== undefined) {
+        if (!isOneOf(PAYMENT_STATUSES, payment)) return { error: `payment_status must be one of: ${PAYMENT_STATUSES.join(', ')}` };
+        q.paymentStatus = payment;
+      }
+      if (fulfillment !== undefined) {
+        if (!isOneOf(FULFILLMENT_STATUSES, fulfillment)) return { error: `fulfillment_status must be one of: ${FULFILLMENT_STATUSES.join(', ')}` };
+        q.fulfillmentStatus = fulfillment;
+      }
+      Object.assign(args, q);
+      Object.assign(body, q);
       return { args, body };
     }
 

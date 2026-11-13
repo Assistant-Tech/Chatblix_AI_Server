@@ -29,6 +29,13 @@ describe('AssistantToolExecutorService.execute', () => {
     ['list_conversations', '{"filter":"stuck","channel":"whatsapp","name_contains":" Sunita ","limit":5}', 'conversations', { filter: 'stuck', channel: 'WHATSAPP', nameContains: 'Sunita', limit: 5 }],
     ['get_conversation', `{"conversation_id":"${CONV}","message_limit":12}`, 'conversation', { conversationId: CONV, messageLimit: 12 }],
     ['list_orders', '{"status":"pending"}', 'orders', { status: 'PENDING', limit: 10 }],
+    ['list_orders', '{"status":"completed"}', 'orders', { status: 'COMPLETED', limit: 10 }],
+    ['list_orders', '{"status":"shipped"}', 'orders', { fulfillmentStatus: 'SHIPPED', limit: 10 }],
+    ['list_orders', '{"status":"DELIVERED"}', 'orders', { fulfillmentStatus: 'DELIVERED', limit: 10 }],
+    ['list_orders', '{"status":"PAID"}', 'orders', { paymentStatus: 'CAPTURED', limit: 10 }],
+    ['list_orders', '{"status":"PAYMENT_FAILED"}', 'orders', { paymentStatus: 'REQUIRES_ACTION', limit: 10 }],
+    ['list_orders', '{"status":"PROCESSING"}', 'orders', { status: 'PENDING', limit: 10 }],
+    ['list_orders', '{"payment_status":"captured","fulfillment_status":"shipped"}', 'orders', { paymentStatus: 'CAPTURED', fulfillmentStatus: 'SHIPPED', limit: 10 }],
     ['list_leads', '{}', 'leads', { limit: 10 }],
     ['get_period_stats', '{"metric":"automation","period":"30d"}', 'period-stats', { metric: 'automation', period: '30d' }],
   ])('routes %s to /internal/ai/assistant/%s with the context injected', async (name, args, path, expected) => {
@@ -82,6 +89,7 @@ describe('AssistantToolExecutorService.execute', () => {
     ['list_conversations', '{"filter":"everything"}'],
     ['list_conversations', '{"filter":"stuck","channel":"carrier-pigeon"}'],
     ['list_orders', '{"status":"LOST"}'],
+    ['list_orders', '{"payment_status":"PENDING"}'],
     ['get_period_stats', '{"metric":"queue","period":"7d"}'],
     ['get_digest', '{"which":"next"}'],
   ])('returns an error without a fetch for %s(%s)', async (name, args) => {

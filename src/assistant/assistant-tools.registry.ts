@@ -27,15 +27,14 @@ export const CONVERSATION_FILTERS = [
 
 export const CHANNELS = ['WHATSAPP', 'INSTAGRAM', 'FACEBOOK', 'TIKTOK', 'WEBSITE'] as const;
 
-export const ORDER_STATUSES = [
-  'PENDING',
-  'PROCESSING',
-  'CONFIRMED',
-  'PAID',
-  'PAYMENT_FAILED',
-  'SHIPPED',
-  'DELIVERED',
-  'CANCELLED',
+export const ORDER_STATUSES = ['DRAFT', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'ARCHIVED'] as const;
+export const PAYMENT_STATUSES = [
+  'NOT_PAID', 'AWAITING', 'AUTHORIZED', 'PARTIALLY_CAPTURED', 'CAPTURED',
+  'PARTIALLY_REFUNDED', 'REFUNDED', 'CANCELLED', 'REQUIRES_ACTION',
+] as const;
+export const FULFILLMENT_STATUSES = [
+  'NOT_FULFILLED', 'PARTIALLY_FULFILLED', 'FULFILLED', 'PARTIALLY_SHIPPED',
+  'SHIPPED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'CANCELLED',
 ] as const;
 
 export const PERIOD_METRICS = ['response_times', 'automation'] as const;
@@ -124,7 +123,9 @@ export const LIST_ORDERS_TOOL: OpenRouterTool = {
     parameters: {
       type: 'object',
       properties: {
-        status: { type: 'string', enum: [...ORDER_STATUSES], description: 'Only orders with this status.' },
+        status: { type: 'string', enum: [...ORDER_STATUSES], description: 'Only orders in this order status (shipped/delivered are fulfillment_status, paid is payment_status).' },
+        payment_status: { type: 'string', enum: [...PAYMENT_STATUSES], description: 'Only orders with this payment status, e.g. CAPTURED for paid.' },
+        fulfillment_status: { type: 'string', enum: [...FULFILLMENT_STATUSES], description: 'Only orders with this fulfillment status, e.g. SHIPPED or DELIVERED.' },
         limit: limitParam('Orders to return,', LIST_LIMIT),
       },
       additionalProperties: false,

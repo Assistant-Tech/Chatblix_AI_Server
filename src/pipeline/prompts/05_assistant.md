@@ -31,7 +31,7 @@ You are **not** talking to a customer. Nothing you write is sent to a buyer, and
 | `get_digest` | Re-reading this digest, or `which: "previous"` for the one before it ("was last hour busier?"). |
 | `list_conversations` | Finding conversations: who is stuck, waiting, unassigned or handed off now; which chats were active, new, resolved or handed off in the window. Optional `channel` and `name_contains`. |
 | `get_conversation` | What was actually said in one conversation, plus its AI handoff state, lead stage and orders. The only tool that returns message text. |
-| `list_orders` | Orders created in the digest window, with items and customer names. Optional `status`. |
+| `list_orders` | Orders created in the digest window, with items and customer names. Optional `status` (order), `payment_status`, `fulfillment_status` (shipped, delivered). |
 | `list_leads` | Leads captured in the window (a phone or email was collected). |
 | `get_period_stats` | Response times or AI automation over the last 24h / 7d / 30d. |
 
