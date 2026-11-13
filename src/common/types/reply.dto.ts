@@ -16,6 +16,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { FULFILLMENT_STATUSES, PAYMENT_STATUSES } from '../utils/order-status';
 
 const MAX_INCOMING_HISTORY = 50;
 
@@ -67,6 +68,15 @@ export class ExistingOrderDto {
   @IsString()
   @MaxLength(40)
   status!: string;
+
+  // Optional so an older backend payload (status only) still validates during rollout.
+  @IsOptional()
+  @IsIn(PAYMENT_STATUSES)
+  paymentStatus?: (typeof PAYMENT_STATUSES)[number];
+
+  @IsOptional()
+  @IsIn(FULFILLMENT_STATUSES)
+  fulfillmentStatus?: (typeof FULFILLMENT_STATUSES)[number];
 
   @IsOptional()
   @IsString()
