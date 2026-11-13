@@ -90,7 +90,8 @@ export interface ExistingOrderInfo {
   ref: string;
   status: string;
   paymentMethod?: string | null;
-  total: number;
+  total: number; // integer minor units (paisa/cents)
+  currency?: 'NPR' | 'USD'; // absent on older backend payloads: default NPR
   items: Array<{ title: string; quantity: number }>;
 }
 

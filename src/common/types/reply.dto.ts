@@ -73,8 +73,13 @@ export class ExistingOrderDto {
   @MaxLength(40)
   paymentMethod?: string | null;
 
-  @IsNumber()
+  // integer minor units (paisa/cents)
+  @IsInt()
   total!: number;
+
+  @IsOptional()
+  @IsIn(['NPR', 'USD'])
+  currency?: 'NPR' | 'USD';
 
   @IsArray()
   @ArrayMaxSize(20)

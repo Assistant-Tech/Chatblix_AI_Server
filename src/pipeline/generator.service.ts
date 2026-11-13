@@ -6,6 +6,7 @@ import { selectToolsForProfile } from './tools.registry';
 import { OpenRouterMessage, ChatStreamEvent, cachedSystemMessage } from './openrouter.client';
 import { compactHistory } from './history-context';
 import { MetricsService } from './metrics.service';
+import { DEFAULT_CURRENCY, formatMoney } from '../common/utils/money';
 import type {
   ContextPacket,
   Triage,
@@ -57,7 +58,11 @@ export class GeneratorService {
     // When an order already exists for this conversation, tell the generator so it
     // stops re-confirming / re-running STAGE 3 and can surface the tracking ref.
     if (ctx.existing_order) {
-      parts.push(`EXISTING_ORDER: ${JSON.stringify(ctx.existing_order)}`);
+      // total arrives as integer minor units: the LLM only ever sees formatted major units.
+      const { total, currency, ...rest } = ctx.existing_order;
+      parts.push(
+        `EXISTING_ORDER: ${JSON.stringify({ ...rest, total: formatMoney(total, currency ?? DEFAULT_CURRENCY) })}`,
+      );
     }
     if (feedback) {
       parts.push(`FEEDBACK: ${JSON.stringify(feedback)}`);
